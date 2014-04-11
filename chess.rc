@@ -1,0 +1,6 @@
+#ifndef CHESS_RC
+#define CHESS_RC
+
+IDI_APPICON               ICON    DISCARDABLE     "chess.ico"
+
+#endif // CHESS_RC

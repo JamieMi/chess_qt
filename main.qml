@@ -7,7 +7,7 @@ import QtQuick.Dialogs 1.1
 Rectangle {
      id: appRect
      objectName: "mainRect"
-     width: 600; height: 500
+     width: 700; height: 550
      color: "white"
 
      signal signalBoardClick(int x, int y)
@@ -22,118 +22,119 @@ Rectangle {
          id: boardRect
          objectName: "boardRect"
          width: 500; height: 500
+         x: 25; y:25
          color: "white"
 
          ListModel {
              id: appModel
              ListElement { name: ""}
-             ListElement { name: "A"}
-             ListElement { name: "B"}
-             ListElement { name: "C"}
-             ListElement { name: "D"}
-             ListElement { name: "E"}
-             ListElement { name: "F"}
-             ListElement { name: "G"}
-             ListElement { name: "H"}
+             ListElement { name: "\n\nA"}
+             ListElement { name: "\n\nB"}
+             ListElement { name: "\n\nC"}
+             ListElement { name: "\n\nD"}
+             ListElement { name: "\n\nE"}
+             ListElement { name: "\n\nF"}
+             ListElement { name: "\n\nG"}
+             ListElement { name: "\n\nH"}
              ListElement { name: ""}
 
-             ListElement { name: "8"}
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darkpawn.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: "8"}
+             ListElement { name: "\n  8"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n8  "}
 
-             ListElement { name: "7"}
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: "7"}
+             ListElement { name: "\n  7"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n7  "}
 
-             ListElement { name: "6"}
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: "6"}
+             ListElement { name: "\n  6"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n6 "}
 
-             ListElement { name: "5"}
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: "5"}
+             ListElement { name: "\n  5"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n5 "}
 
-             ListElement { name: "4"}
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: "4"}
+             ListElement { name: "\n  4"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n4  "}
 
-             ListElement { name: "3"}
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: "3"}
+             ListElement { name: "\n  3"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n3  "}
 
-             ListElement { name: "2"}
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: "2"}
+             ListElement { name: "\n  2"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n2  "}
 
-             ListElement { name: "1"}
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: ""; icon: "lightsquare.gif" }
-             ListElement { name: ""; icon: "darksquare.gif" }
-             ListElement { name: "1"}
+             ListElement { name: "\n  1"}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: ""}
+             ListElement { name: "\n1  "}
 
              ListElement { name: ""}
-             ListElement { name: "A"}
-             ListElement { name: "B"}
-             ListElement { name: "C"}
-             ListElement { name: "D"}
-             ListElement { name: "E"}
-             ListElement { name: "F"}
-             ListElement { name: "G"}
-             ListElement { name: "H"}
+             ListElement { name: "\nA"}
+             ListElement { name: "\nB"}
+             ListElement { name: "\nC"}
+             ListElement { name: "\nD"}
+             ListElement { name: "\nE"}
+             ListElement { name: "\nF"}
+             ListElement { name: "\nG"}
+             ListElement { name: "\nH"}
              ListElement { name: ""}
          }
 
@@ -146,7 +147,7 @@ Rectangle {
                  Image {
                      id: myIcon
                      y: 0; anchors.horizontalCenter: parent.horizontalCenter
-                     source: icon
+                     //source: icon
                  }
                  Text {
                      anchors { top: myIcon.bottom; horizontalCenter: parent.horizontalCenter }
@@ -171,13 +172,14 @@ Rectangle {
              model: appModel
              delegate: appDelegate
 
-             Rectangle {
+             /*Rectangle {
                  id: r8f1
-                 x: 50
-                 y: 50
+                 x: 550
+                 y: 5
                  width: 50
                  height: 50
                  color: "#00000000"
+                 border.width: 1
              }
 
              Rectangle {
@@ -241,7 +243,7 @@ Rectangle {
                  width: 50
                  height: 50
                  color: "#00000000"
-             }
+             }*/
 
              MouseArea {
                  id: mouseAreaBoard
@@ -253,13 +255,84 @@ Rectangle {
 
                  onClicked: appRect.signalBoardClick(mouse.x, mouse.y)
              }
+
+             Image {x: 50; y: 50; width: 50; height: 50; source: imageR8F1}
+             Image {x: 100; y: 50; width: 50; height: 50; source: imageR8F2}
+             Image {x: 150; y: 50; width: 50; height: 50; source: imageR8F3}
+             Image {x: 200; y: 50; width: 50; height: 50; source: imageR8F4}
+             Image {x: 250; y: 50; width: 50; height: 50; source: imageR8F5}
+             Image {x: 300; y: 50; width: 50; height: 50; source: imageR8F6}
+             Image {x: 350; y: 50; width: 50; height: 50; source: imageR8F7}
+             Image {x: 400; y: 50; width: 50; height: 50; source: imageR8F8}
+             Image {x: 50; y: 100; width: 50; height: 50; source: imageR7F1}
+             Image {x: 100; y: 100; width: 50; height: 50; source: imageR7F2}
+             Image {x: 150; y: 100; width: 50; height: 50; source: imageR7F3}
+             Image {x: 200; y: 100; width: 50; height: 50; source: imageR7F4}
+             Image {x: 250; y: 100; width: 50; height: 50; source: imageR7F5}
+             Image {x: 300; y: 100; width: 50; height: 50; source: imageR7F6}
+             Image {x: 350; y: 100; width: 50; height: 50; source: imageR7F7}
+             Image {x: 400; y: 100; width: 50; height: 50; source: imageR7F8}
+             Image {x: 50; y: 150; width: 50; height: 50; source: imageR6F1}
+             Image {x: 100; y: 150; width: 50; height: 50; source: imageR6F2}
+             Image {x: 150; y: 150; width: 50; height: 50; source: imageR6F3}
+             Image {x: 200; y: 150; width: 50; height: 50; source: imageR6F4}
+             Image {x: 250; y: 150; width: 50; height: 50; source: imageR6F5}
+             Image {x: 300; y: 150; width: 50; height: 50; source: imageR6F6}
+             Image {x: 350; y: 150; width: 50; height: 50; source: imageR6F7}
+             Image {x: 400; y: 150; width: 50; height: 50; source: imageR6F8}
+             Image {x: 50; y: 200; width: 50; height: 50; source: imageR5F1}
+             Image {x: 100; y: 200; width: 50; height: 50; source: imageR5F2}
+             Image {x: 150; y: 200; width: 50; height: 50; source: imageR5F3}
+             Image {x: 200; y: 200; width: 50; height: 50; source: imageR5F4}
+             Image {x: 250; y: 200; width: 50; height: 50; source: imageR5F5}
+             Image {x: 300; y: 200; width: 50; height: 50; source: imageR5F6}
+             Image {x: 350; y: 200; width: 50; height: 50; source: imageR5F7}
+             Image {x: 400; y: 200; width: 50; height: 50; source: imageR5F8}
+
+             Image {x: 50; y: 250; width: 50; height: 50; source: imageR4F1}
+             Image {x: 100; y: 250; width: 50; height: 50; source: imageR4F2}
+             Image {x: 150; y: 250; width: 50; height: 50; source: imageR4F3}
+             Image {x: 200; y: 250; width: 50; height: 50; source: imageR4F4}
+             Image {x: 250; y: 250; width: 50; height: 50; source: imageR4F5}
+             Image {x: 300; y: 250; width: 50; height: 50; source: imageR4F6}
+             Image {x: 350; y: 250; width: 50; height: 50; source: imageR4F7}
+             Image {x: 400; y: 250; width: 50; height: 50; source: imageR4F8}
+
+             Image {x: 50; y: 300; width: 50; height: 50; source: imageR3F1}
+             Image {x: 100; y: 300; width: 50; height: 50; source: imageR3F2}
+             Image {x: 150; y: 300; width: 50; height: 50; source: imageR3F3}
+             Image {x: 200; y: 300; width: 50; height: 50; source: imageR3F4}
+             Image {x: 250; y: 300; width: 50; height: 50; source: imageR3F5}
+             Image {x: 300; y: 300; width: 50; height: 50; source: imageR3F6}
+             Image {x: 350; y: 300; width: 50; height: 50; source: imageR3F7}
+             Image {x: 400; y: 300; width: 50; height: 50; source: imageR3F8}
+
+             Image {x: 50; y: 350; width: 50; height: 50; source: imageR2F1}
+             Image {x: 100; y: 350; width: 50; height: 50; source: imageR2F2}
+             Image {x: 150; y: 350; width: 50; height: 50; source: imageR2F3}
+             Image {x: 200; y: 350; width: 50; height: 50; source: imageR2F4}
+             Image {x: 250; y: 350; width: 50; height: 50; source: imageR2F5}
+             Image {x: 300; y: 350; width: 50; height: 50; source: imageR2F6}
+             Image {x: 350; y: 350; width: 50; height: 50; source: imageR2F7}
+             Image {x: 400; y: 350; width: 50; height: 50; source: imageR2F8}
+
+             Image {x: 50; y: 400; width: 50; height: 50; source: imageR1F1}
+             Image {x: 100; y: 400; width: 50; height: 50; source: imageR1F2}
+             Image {x: 150; y: 400; width: 50; height: 50; source: imageR1F3}
+             Image {x: 200; y: 400; width: 50; height: 50; source: imageR1F4}
+             Image {x: 250; y: 400; width: 50; height: 50; source: imageR1F5}
+             Image {x: 300; y: 400; width: 50; height: 50; source: imageR1F6}
+             Image {x: 350; y: 400; width: 50; height: 50; source: imageR1F7}
+             Image {x: 400; y: 400; width: 50; height: 50; source: imageR1F8}
+
+
          }
      }
 
     Image {
         id: imageNew
-        x: 516
-        y: 42
+        x: 577
+        y: 76
         width: 60
         height: 60
         sourceSize.height: 123
@@ -269,8 +342,8 @@ Rectangle {
 
     Image {
         id: imageSave
-        x: 516
-        y: 103
+        x: 577
+        y: 137
         width: 60
         height: 60
         sourceSize.width: 123
@@ -280,8 +353,8 @@ Rectangle {
 
     Image {
         id: imageHuman
-        x: 522
-        y: 294
+        x: 583
+        y: 319
         width: 48
         height: 48
         sourceSize.width: 123
@@ -291,8 +364,8 @@ Rectangle {
 
     Image {
         id: imageComputer
-        x: 522
-        y: 348
+        x: 583
+        y: 373
         width: 48
         height: 48
         sourceSize.height: 123
@@ -302,8 +375,8 @@ Rectangle {
 
     Image {
         id: imageComputerMove
-        x: 522
-        y: 402
+        x: 583
+        y: 427
         width: 48
         height: 48
         sourceSize.width: 123
@@ -313,8 +386,8 @@ Rectangle {
 
      Image {
          id: imageLoad
-         x: 516
-         y: 164
+         x: 577
+         y: 198
          width: 60
          height: 60
          sourceSize.height: 123
@@ -324,8 +397,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaNew
-         x: 516
-         y: 42
+         x: 577
+         y: 76
          width: 60
          height: 60
          onClicked: appRect.signalNewGame()
@@ -333,8 +406,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaSave
-         x: 516
-         y: 103
+         x: 577
+         y: 137
          width: 60
          height: 60
          onClicked: appRect.signalSaveGame()
@@ -342,8 +415,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaLoad
-         x: 516
-         y: 164
+         x: 577
+         y: 198
          width: 60
          height: 60
          onClicked: appRect.signalLoadGame()
@@ -351,8 +424,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaHuman
-         x: 522
-         y: 294
+         x: 583
+         y: 319
          width: 48
          height: 48
          onClicked: appRect.signalHuman()
@@ -360,8 +433,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaComputer
-         x: 522
-         y: 348
+         x: 583
+         y: 373
          width: 48
          height: 48
          onClicked: appRect.signalComputer()
@@ -369,8 +442,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaComputerMove
-         x: 522
-         y: 402
+         x: 583
+         y: 427
          width: 48
          height: 48
          onClicked: appRect.signalComputerMove()

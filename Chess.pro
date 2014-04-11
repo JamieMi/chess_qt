@@ -19,7 +19,7 @@ QT += core gui declarative # necessary?
 include(qtquick2applicationviewer/qtquick2applicationviewer.pri)
 qtcAddDeployment()
 
-OTHER_FILES +=
-
 HEADERS += \
     chess.h
+
+QMAKE_CXXFLAGS += -std=c++11
