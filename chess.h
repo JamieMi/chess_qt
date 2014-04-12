@@ -88,6 +88,10 @@ public:
     std::vector<player> players;
     gameobject();
     gameobject(const gameobject& game);
+    int cPlayer;
+    position GUImoveStart, GUImoveEnd;
+    bool bGameOver;
+
     void createBoard(){for (size_t i = 0;i < 8; ++i) cboard.push_back("........");}
     // Note: board size not referred to here, as it would complicate the method...
     void resetBoard(){
@@ -95,7 +99,7 @@ public:
         createBoard();
     }
     void createPositions();
-    void printBoard() /*const*/;
+    void printBoard();
     void printPlayers() const;
     void printPieces() const;
     void placePieces();
@@ -103,7 +107,7 @@ public:
     void saveGame(const size_t& player) const;
     void newGame();
     void makeBoard(); // all functionality common to New and Load
-    bool validateMove(std::string cmd, size_t iplayer = 0) /*const*/;
+    bool validateMove(std::string cmd, size_t iplayer = 0);
     void getMoveCoords(const std::string& cmd, position& start, position& end) const;
     void movePiece(std::string cmd, size_t iplayer = 0, bool bAI = false);
     bool checkPath(const position& start_pos,
@@ -113,12 +117,12 @@ public:
                     const int& theirPiece,
                     const size_t& iplayer,
                     bool bCheckCheck) const;
-    bool inCheck(const size_t& iPlayer, size_t& hiScore, position startPos, position endPos, /*const*/ gameobject* gm) const;
+    bool inCheck(const size_t& iPlayer, size_t& hiScore, position startPos, position endPos, gameobject* gm) const;
     bool inCheckMate(const size_t& player, const bool bMakeMove);
-    bool isOurs( position& pos, size_t iPlayer) ;
+    bool isOurs( position& pos, int iPlayer) ;
     bool computerTurn(size_t iPlayer);
     std::string createMove(const position& startPos, const position& endPos) const ;
-    void showStats() /*const*/;
+    void showStats();
     int getNumPieces(const int& iPlayer) const;
     bool isStalemate();
     char basicType(char p);
@@ -129,25 +133,38 @@ class ChessGUI : public QObject
 {
     Q_OBJECT
 public:
-    void displayBoardImages(gameobject* pgm, QtQuick2ApplicationViewer* pView) const;
+    ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV){pGame = pg; pView = pV;}
+    void displayBoardImages() const;
+    void initialise();
+    std::string getBoardRef(int x, int y) const;
+    void showMessage(std::string msg) const;
+    void setStateOrigin(char p, position pos);
 private:
-    void boardClick(int x, int y) const;
+    void boardClick(int x, int y);
     void newClick() const;
     void saveClick() const;
     void loadClick() const;
     void humanClick() const;
     void computerClick() const;
     void computerMoveClick() const;
-    void showMessage(std::string msg) const;
-    std::string setSquareImage(gameobject* pgm, char& p, int row, int col) const;
+    void transitionComplete();
+    void completeMove();
+    bool move();
+    void displayMove();
+    void moveReady();
+    std::string setSquareImage(char& p, int row, int col) const;
+    gameobject* pGame;
+    QtQuick2ApplicationViewer* pView;
 public:
-    Q_INVOKABLE void boardClickSlot(int x, int y) const {boardClick(x,y);}
+    Q_INVOKABLE void boardClickSlot(int x, int y) {boardClick(x,y);}
     Q_INVOKABLE void newSlot() const {newClick();}
     Q_INVOKABLE void saveSlot() const {saveClick();}
     Q_INVOKABLE void loadSlot() const {loadClick();}
     Q_INVOKABLE void humanSlot() const {humanClick();}
     Q_INVOKABLE void computerSlot() const {computerClick();}
     Q_INVOKABLE void computerMoveSlot() const {computerMoveClick();}
+    Q_INVOKABLE void transitionCompleteSlot(){transitionComplete();}
+    Q_INVOKABLE void moveReadySlot(){moveReady();}
 };
 
 #endif // CHESS_H
