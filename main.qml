@@ -164,6 +164,7 @@ Rectangle {
 
          GridView {
              id: chessGrid
+             interactive: false
              anchors.fill: parent
              cellWidth: 50; cellHeight: 50
              focus: true
@@ -265,8 +266,8 @@ Rectangle {
 
     Image {
         id: imageNew
-        x: 577
-        y: 76
+        x: 580
+        y: 141
         width: 60
         height: 60
         sourceSize.height: 123
@@ -276,8 +277,8 @@ Rectangle {
 
     Image {
         id: imageSave
-        x: 577
-        y: 137
+        x: 580
+        y: 202
         width: 60
         height: 60
         sourceSize.width: 123
@@ -287,8 +288,8 @@ Rectangle {
 
     Image {
         id: imageHuman
-        x: 583
-        y: 319
+        x: 586
+        y: 335
         width: 48
         height: 48
         sourceSize.width: 123
@@ -298,8 +299,8 @@ Rectangle {
 
     Image {
         id: imageComputer
-        x: 583
-        y: 373
+        x: 586
+        y: 396
         width: 48
         height: 48
         sourceSize.height: 123
@@ -309,8 +310,8 @@ Rectangle {
 
     Image {
         id: imageComputerMove
-        x: 583
-        y: 427
+        x: 586
+        y: 455
         width: 48
         height: 48
         sourceSize.width: 123
@@ -320,8 +321,8 @@ Rectangle {
 
      Image {
          id: imageLoad
-         x: 577
-         y: 198
+         x: 580
+         y: 263
          width: 60
          height: 60
          sourceSize.height: 123
@@ -331,8 +332,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaNew
-         x: 577
-         y: 76
+         x: 580
+         y: 141
          width: 60
          height: 60
          onClicked: appRect.signalNewGame()
@@ -340,8 +341,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaSave
-         x: 577
-         y: 137
+         x: 580
+         y: 202
          width: 60
          height: 60
          onClicked: appRect.signalSaveGame()
@@ -349,8 +350,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaLoad
-         x: 577
-         y: 198
+         x: 580
+         y: 263
          width: 60
          height: 60
          onClicked: appRect.signalLoadGame()
@@ -358,8 +359,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaHuman
-         x: 583
-         y: 319
+         x: 586
+         y: 335
          width: 48
          height: 48
          onClicked: appRect.signalHuman()
@@ -367,8 +368,8 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaComputer
-         x: 583
-         y: 373
+         x: 586
+         y: 396
          width: 48
          height: 48
          onClicked: appRect.signalComputer()
@@ -376,28 +377,28 @@ Rectangle {
 
      MouseArea {
          id: mouseAreaComputerMove
-         x: 583
-         y: 427
+         x: 586
+         y: 455
          width: 48
          height: 48
          onClicked: appRect.signalComputerMove()
      }
+     Text {
+         id: text1
+         x: 520
+         y: 25
+         width: 180
+         height: 105
+         text: qsTr(statusText)
+         z: 2
+         wrapMode: Text.WordWrap
+         horizontalAlignment: Text.AlignHCenter
+         verticalAlignment: Text.AlignTop
+         font.pixelSize: 16
+     }
      states: [
          State {
              name: "EndMoveState"
-             PropertyChanges {
-                 target: stateOrigin// imager2f4 // ///*icon*/
-                 x: transitionTargetX
-                 y: transitionTargetY
-             }
-
-             PropertyChanges {
-                 target: appRect
-                 border.color: "#ff0000"
-             }
-         },
-         State {
-             name: "StartMoveState"
              PropertyChanges {
                  target: stateOrigin
                  x: transitionTargetX
@@ -406,13 +407,13 @@ Rectangle {
 
              PropertyChanges {
                  target: appRect
-                 border.color: "#0000ff"
+                 border.color: "#ff0000"
              }
          }
      ]
      transitions: [
              Transition {
-                 id: transition2
+                 id: transition1
                      from: "*"; to: "EndMoveState"
                      NumberAnimation {
                          properties: "x,y";
@@ -426,8 +427,7 @@ Rectangle {
                      }
                  },
              Transition {
-                 id: transition1
-                     //from: "*"; to: "StartMoveState"
+                 id: transition2
                      NumberAnimation {
                          properties: "x,y";
                          duration: 0

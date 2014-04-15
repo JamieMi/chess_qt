@@ -24,8 +24,8 @@ using namespace std;
 
 #include "chess.h"
 
-//#include <QMenu>
-//#include <QMenuBar>
+//#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
+#define __GUI__ // shows using GUI - alternative is console mode
 
 const int MAX_TURNS = 50;
 const int FRAME_WIDTH = 1200;
@@ -40,13 +40,23 @@ const int BOARD_RANKS = 8;
 enum selection {NO_SELECTION, FROM_SELECTED, TO_SELECTED};
 selection selectionState = NO_SELECTION;
 
-#define __DEBUG__
-#define __GUI__
+enum looptype{THEM_AGAINST_KING,	// check								M:1
+              THEM_AGAINST_CURRENT,	// the opportunity cost (of not moving) M:1
+              THEM_AGAINST_PIECE,	// against the piece we've just moved	M:1
+              US_AGAINST_KING,		// check								M:1
+              US_AGAINST_PIECE,		// against other pieces					1:M
+              NO_MORE} checkDirection;
 
 #ifdef __GUI__
-    bool bImages = true;
+    const bool bImages = true;
+#ifdef __DEBUG__
+    const bool bConsole = true;
 #else
-    bool bImages = false;
+    const bool bConsole = false;
+#endif
+#else
+    const bool bConsole = true;
+    const bool bImages = false;
 #endif
 
 // turns on debug output and pauses
@@ -54,6 +64,8 @@ selection selectionState = NO_SELECTION;
 void trace(string s){
 #ifdef __DEBUG__
     cout << s << endl;
+#else
+    s = "";
 #endif
 }
 
@@ -115,6 +127,17 @@ bool operator> (const board& pm, board& pm2) {return pm2 < pm;}
 bool operator>= (const board& pm, board& pm2) {return (pm2 < pm) || (pm == pm2);}
 bool operator<= (const board& pm, board& pm2) {return (pm < pm2) || (pm == pm2);}
 
+bool toEndline(const position& endPos, const size_t& player){
+    return endPos.row == (1-player)*7;
+}
+
+bool offBackline(const position& ourPos, const position& endPos, const size_t& distance, const size_t& player){
+    return (ourPos.row == player*7) && (abs((int)endPos.row - (int)ourPos.row) >= (int)distance);
+}
+
+bool position::isValid(){
+    return (row < BOARD_RANKS && col < BOARD_FILES); // (uses size_t)
+}
 
 gameobject::gameobject(){
     turn = 1;
@@ -167,6 +190,8 @@ void player::setPieces(){
 }
 
 void gameobject::newGame(){
+    turn = 1;
+    cPlayer = 1;
     players[0].setPieces();
     players[1].setPieces();
     for (size_t i = 0; i < 16; ++i){
@@ -194,7 +219,6 @@ void gameobject::createPositions(){
     }
 
     //others
-    // TO DO: link this to the pieces list?
     for (size_t i = 0; i < BOARD_FILES; i++){
         players[0].pushBackPos(position(0,i));
         players[1].pushBackPos(position(BOARD_RANKS-1,i));
@@ -218,16 +242,15 @@ void gameobject::placePieces(){
     }
 }
 
-void gameobject::loadGame(size_t& player){
+bool gameobject::loadGame(){
     // get names and positions
-    string filename("saved_game.txt");
+    string filename("saved_chess.txt");
     ifstream input;
     input.open(filename);
     if (!input.is_open()){
-        cout << "Saved game could not be loaded." << endl;
         input.clear();
         input.close();
-        return;
+        return false;
     }
 
     // players already exists - just write over it
@@ -254,23 +277,23 @@ void gameobject::loadGame(size_t& player){
     ss << ln << endl;
     getline(input,ln);
     ss << ln;
-    ss >> player >> turn;
+    ss >> cPlayer >> turn;
 
     input.close();
 
     // reload the board
     makeBoard();
+    return true;
 }
 
-void gameobject::saveGame(const size_t& player) const{
+bool gameobject::saveGame() const{
     ofstream output;
-    string filename("saved_game.txt");
+    string filename("saved_chess.txt");
     output.open(filename);
     if (!output.is_open()){
-        cout << filename << " could not be saved." << endl;
         output.clear();
         output.close();
-        return;
+        return false;
     }
     stringstream ss;
     for (size_t i = 0; i < players.size(); ++i){
@@ -281,11 +304,12 @@ void gameobject::saveGame(const size_t& player) const{
         }
     }
 
-    ss << player << endl;
+    ss << cPlayer << endl;
     ss << turn << endl;
 
     output << ss.str();
     output.close();
+    return true;
 }
 
 bool gameobject::isOurs( position& pos, int iPlayer){
@@ -305,10 +329,9 @@ int gameobject::getNumPieces(const int& iplayer) const{
     return total;
 }
 
-bool gameobject::computerTurn(size_t iplayer){
+bool gameobject::computerTurn(size_t iPlayer){
     // calculate all moves - do the one with the highest value
-    //return inCheckMate(iplayer, true); // TO DO
-    return false;
+    return inCheckMate(iPlayer, true);
     // (barring stalemate, should never return false though, or it would already have been detected)
 }
 
@@ -318,7 +341,7 @@ string gameobject::createMove(const position& startPos, const position& endPos)c
     char startCol = (char)(int(startPos.col) + (int)'A');
     char endCol = (char)(int(endPos.col) + (int) 'A');
 
-    ss << startCol << (8-startPos.row) << '-' << endCol << (8-endPos.row);
+    ss << startCol << (BOARD_RANKS - startPos.row) << '-' << endCol << (BOARD_RANKS - endPos.row);
     ss >> sMove;
 
     return sMove;
@@ -342,12 +365,14 @@ void gameobject::getMoveCoords(const string& cmd, position& start, position& end
 }
 
 void gameobject::printPieces() const{
-    for (size_t i = 0; i < players.size(); ++i){
-        cout << players[i].getName() << endl;
-            for (vector<position>::const_iterator itr = players[i].positions.begin(); itr != players[i].positions.end(); ++itr)
-            cout << "Piece: " << itr->row << " : " << itr->col << endl;
+    if (bConsole){
+        for (size_t i = 0; i < players.size(); ++i){
+            cout << players[i].getName() << endl;
+                for (vector<position>::const_iterator itr = players[i].positions.begin(); itr != players[i].positions.end(); ++itr)
+                cout << "Piece: " << itr->row << " : " << itr->col << endl;
+        }
+        cout << endl;
     }
-    cout << endl;
 }
 
 size_t gameobject::getCaptureValue(const char& piece){
@@ -366,7 +391,7 @@ size_t gameobject::getCaptureValue(const char& piece){
 
 bool gameobject::validateMove(string cmd, size_t iPlayer){
     if (cmd.size() != 5){
-        cout << "\nThat move is not allowed.\n" << endl;
+        if (bConsole) cout << "\nThat move is not allowed.\n" << endl;
         return false;
     }
 
@@ -378,13 +403,13 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
         (startPos.row >= BOARD_RANKS) ||
         (endPos.col >= BOARD_FILES) ||
         (endPos.row >= BOARD_RANKS)) {
-        cout << endl << "That move is not allowed." << endl;
+        if (bConsole) cout << endl << "That move is not allowed." << endl;
         return false;
     }
     int ourPiece = -1;
     int theirPiece = -1;
     if (cboard[startPos.row][startPos.col] == '.'){
-        cout << "There's no piece to move from there." << endl;
+        if (bConsole) cout << "There's no piece to move from there." << endl;
         return false;
     }
     else{// find out if it's one of ours
@@ -395,7 +420,7 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
             }
         }
         if (ourPiece == -1){
-            cout << "That's not your piece to move..." << endl;
+            if (bConsole) cout << "That's not your piece to move..." << endl;
             return false;
         }
     }
@@ -409,11 +434,11 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
             }
         }
         if (theirPiece != -1){
-            // cout << "You've taken a piece..." << endl;
+            if (bConsole) cout << "You've taken a piece..." << endl;
         }
         else
         {
-            cout << "That position is occupied by one of your pieces already." << endl;
+            if (bConsole) cout << "That position is occupied by one of your pieces already." << endl;
             return false;
         }
     }
@@ -423,8 +448,7 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
     size_t dummyScore = 0;
 
     // pawns
-    //piece = toupper(piece);
-    if (piece == 'P' || piece == 'E'){
+    if (basicType(piece) == 'P'){
         // pawns can move 2 down from 2nd row, or 1, or 1 diagonally forward if there is another piece in the way
         if (iPlayer == 0 && (startPos.row == 1 && endPos.row == 3 && startPos.col == endPos.col)){
             //valid - 2 moves forward, if unoccupied
@@ -443,8 +467,8 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
         else if ((iPlayer == 0 && (endPos.row - startPos.row == 1)) ||
                  (iPlayer == 1 && (startPos.row - endPos.row == 1))){
             // could be valid
-            if( (abs(int(endPos.col - startPos.col)) == 1 && destination != '.') ||
-                (abs(int(endPos.col - startPos.col)) == 1 && destination == '.' && cboard[endPos.row + (iPlayer*2 -1)][endPos.col] == 'E')  ){
+            if( (abs((int)endPos.col - (int)startPos.col) == 1 && destination != '.') ||
+                (abs((int)endPos.col - (int)startPos.col) == 1 && destination == '.' && cboard[endPos.row + (iPlayer*2 -1)][endPos.col] == 'E')  ){
                 //diagonal move, either to take a piece directly or to take a pawn on passant
                 // move the right piece in the positions list, if it's one of theirs
                 for (size_t i = 0; i < players[1-iPlayer].positions.size(); ++i){
@@ -477,8 +501,8 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
     // knight
     // 2 x 1, anywhere
     if (piece == 'N'){
-        if( (abs(int(endPos.col - startPos.col)) == 1 && abs(int(endPos.row - startPos.row)) == 2)  ||
-            (abs(int(endPos.col - startPos.col)) == 2 && abs(int(endPos.row - startPos.row)) == 1) ){
+        if( (abs((int)endPos.col - (int)startPos.col) == 1 && abs((int)endPos.row - (int)startPos.row) == 2)  ||
+            (abs((int)endPos.col - (int)startPos.col) == 2 && abs((int)endPos.row - (int)startPos.row) == 1) ){
             if (bDestEmpty || (theirPiece != -1))
                 return !inCheck(iPlayer, dummyScore, startPos, endPos, NULL); // can't leave ourself in check
             else
@@ -489,10 +513,10 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
     }
 
     // rook
-    if (piece == 'R' || piece == 'S'){
+    if (basicType(piece) == 'R'){
         if (endPos.col == startPos.col || endPos.row == startPos.row){ // can't both be equal anyway
             // direction is OK, at least. Now check what's in the way...
-            size_t distance = max( abs(int(endPos.col - startPos.col)), abs(int(endPos.row - startPos.row)) );
+            size_t distance = max( abs((int)endPos.col - (int)startPos.col), abs((int)endPos.row - (int)startPos.row) );
             if (checkPath(startPos, endPos, distance, bDestEmpty, theirPiece, iPlayer, false))
                 return !inCheck(iPlayer, dummyScore, startPos, endPos, NULL); // can't leave ourself in check
         }
@@ -501,9 +525,9 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
 
     // bishop
     if (piece == 'B'){
-        if( abs(int(endPos.col - startPos.col)) == abs(int(endPos.row - startPos.row)) ){ // horizontal distance = vertical
+        if( abs((int)endPos.col - (int)startPos.col) == abs((int)endPos.row - (int)startPos.row) ){ // horizontal distance = vertical
             // direction is OK, at least. Now check what's in the way...
-            size_t distance = abs(int(endPos.col - startPos.col));
+            size_t distance = abs((int)endPos.col - (int)startPos.col);
             if (checkPath(startPos, endPos, distance, bDestEmpty, theirPiece, iPlayer, false))
                 return !inCheck(iPlayer, dummyScore, startPos, endPos, NULL); // can't leave ourself in check
         }
@@ -511,12 +535,12 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
     }
 
     // queen or king
-    if (piece == 'Q' || piece == 'K' || piece == 'L'){
-        if( abs(int(endPos.col - startPos.col)) == abs(int(endPos.row - startPos.row)) ||	// horizontal distance = vertical, or
-            (endPos.col == startPos.col || endPos.row == startPos.row) ){					// vertical or horizontal
+    if (piece == 'Q' || basicType(piece) == 'K'){
+        if( abs((int)endPos.col - (int)startPos.col) == abs((int)endPos.row - (int)startPos.row) ||	// horizontal distance = vertical, or
+            (endPos.col == startPos.col || endPos.row == startPos.row) ){                       	// vertical or horizontal
             // direction is OK, at least. Now check what's in the way...
-            size_t distance = max(  abs(int(endPos.col - startPos.col)) ,													// if diagonal
-                                    max(abs(int(endPos.col - startPos.col)), abs(int(endPos.row - startPos.row))) );	// if h/v
+            size_t distance = max(  abs((int)endPos.col - (int)startPos.col) ,													// if diagonal
+                                    max(abs((int)endPos.col - (int)startPos.col), abs((int)endPos.row - (int)startPos.row)) );	// if h/v
             if (distance == 1 || piece == 'Q'){ // Kings can only move one space
                 if (checkPath(startPos, endPos, distance, bDestEmpty, theirPiece,iPlayer, false)){
                     return !inCheck(iPlayer, dummyScore, startPos, endPos, NULL); // can't leave ourself in check
@@ -567,7 +591,7 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
 void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     position startPos, endPos;
     getMoveCoords(cmd, startPos, endPos);
-    bool bStalemate = false;
+    //bool bStalemate = false; // to implement
 
     size_t ourIndex = -1;
     // move the right piece in the positions list
@@ -594,11 +618,11 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
 
     // move the piece on the board:
     char piece = cboard[startPos.row][startPos.col];
-    char origDest = cboard[endPos.row][endPos.col];
+    // char origDest = cboard[endPos.row][endPos.col];
     cboard[startPos.row][startPos.col] = '.';
-    assert (cboard[endPos.row][endPos.col] != 'K' && cboard[endPos.row][endPos.col] != 'L'); // we should never have reached this point
+    assert (basicType(cboard[endPos.row][endPos.col]) != 'K'); // we should never have reached this point
     cboard[endPos.row][endPos.col] = piece;
-    cout << "Moved." << endl;
+    if (bConsole) cout << "Moved." << endl;
     players[iPlayer].lastPieceMoved = ourIndex;
 
     // if the king is moving from its start position...
@@ -606,7 +630,7 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
         players[iPlayer].pieces[ourIndex] = 'K';
         cboard[endPos.row][endPos.col] = 'K';
         // is this a castling?
-        if (abs(int(startPos.col) - int(endPos.col)) == 2){
+        if (abs((int)startPos.col - (int)endPos.col) == 2){
             // castling - we've moved the king, and now we have to move the rook to the space between
             if (startPos.col == 4 && endPos.col == 6){ // kingside rook - position 16
                 players[iPlayer].pieces[15] = 'R';
@@ -637,7 +661,7 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     if ( piece == 'P' && cboard[endPos.row - vDir][endPos.col] == 'E' ){
         // capture the opponent's piece, en passant:
         cboard[endPos.row - vDir][endPos.col] = '.';
-        cout << "Pawn captured, en passant." << endl;
+        if (bConsole) cout << "Pawn captured, en passant." << endl;
         for (size_t i = 0; i < players[1-iPlayer].positions.size(); ++i){
             if ( (players[1-iPlayer].positions[i].row == endPos.row - vDir) &&
                  (players[1-iPlayer].positions[i].col == endPos.col) )		{
@@ -682,40 +706,45 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
                     players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
             }
 
-            cout << "The pawn has been promoted." << endl;
+            if (bConsole) cout << "The pawn has been promoted." << endl;
         }
         else
         {
-            cout << "The pawn has been promoted. What piece do you want to convert it to? You may choose a knight, rook, bishop or queen."<< endl;
-            bool bConverted = false;
-            string input;
-            while(!bConverted){
-                cin >> input;
-                transform(input.begin(), input.end(), input.begin(), ::tolower);
+            string promoText = "The pawn has been promoted. What piece do you want to convert it to? You may choose a knight, rook, bishop or queen.";
+            if (bConsole){
+                cout << promoText << endl;
+                bool bConverted = false;
+                string input;
+                while(!bConverted){
+                    cin >> input;
+                    transform(input.begin(), input.end(), input.begin(), ::tolower);
+                    if (input == "queen"){
+                        cboard[endPos.row][endPos.col] = 'Q';
+                        bConverted = true;
+                    }
+                    if (input == "bishop"){
+                        cboard[endPos.row][endPos.col] = 'B';
+                        bConverted = true;
+                    }
+                    if (input == "rook"){
+                        cboard[endPos.row][endPos.col] = 'R';
+                        bConverted = true;
+                    }
+                    if (input == "knight"){
+                        cboard[endPos.row][endPos.col] = 'N';
+                        bConverted = true;
+                    }
 
-                if (input == "queen"){
-                    cboard[endPos.row][endPos.col] = 'Q';
-                    bConverted = true;
+                    for (size_t i = 0; i < players[iPlayer].pieces.size(); ++i){
+                        if (players[iPlayer].positions[i] == endPos)
+                            players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
+                    }
                 }
-                if (input == "bishop"){
-                    cboard[endPos.row][endPos.col] = 'B';
-                    bConverted = true;
-                }
-                if (input == "rook"){
-                    cboard[endPos.row][endPos.col] = 'R';
-                    bConverted = true;
-                }
-                if (input == "knight"){
-                    cboard[endPos.row][endPos.col] = 'N';
-                    bConverted = true;
-                }
-
-                for (size_t i = 0; i < players[iPlayer].pieces.size(); ++i){
-                    if (players[iPlayer].positions[i] == endPos)
-                        players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
-                }
+                cout << "Thank you. The pawn has been promoted." << endl;
             }
-            cout << "Thank you. The pawn has been promoted." << endl;
+            else{
+                // TO DO: a dialogue box offering buttons for different piece types
+            }
         }
     }
 
@@ -723,14 +752,673 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     return;
 }
 
-bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position startPos, position endPos, gameobject* gm)const{
-    return false;
-    // TO DO
+bool gameobject::commonScoring(bool bInCheck, size_t hiScore, int ourValue, int theirValue, int kingValue, bool bAI, size_t iPlayer){
+    if (checkDirection == THEM_AGAINST_KING){
+        bInCheck = true; // TO DO: check this
+        hiScore -= 500;
+    }
+    if (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE){
+        hiScore -= ourValue * (1 + (ourValue >= 9));
+        // TO DO: if this is the only place our_value is used - we should instead just change the value of Q or K at source
+    }
+    if (checkDirection == THEM_AGAINST_CURRENT)
+        hiScore += ourValue * (1 + (ourValue >= 9));
+    if (checkDirection == US_AGAINST_KING){
+        if (getNumPieces(iPlayer) > 5)
+            hiScore -= kingValue / 1.4; // don't provide too much encouragement to check before it's going to work
+    }
+    if (checkDirection == US_AGAINST_PIECE)
+        hiScore += theirValue / 1.5;
+    return bAI;
 }
 
-bool gameobject::checkPath(const position& startPos, const position& endPos, const int& distance, const bool& bDestEmpty, const int& theirPiece, const size_t& iPlayer, bool bCheckCheck) const{
+bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position startPos, position endPos, gameobject* gm){
+    // make a copy of the board and positions arrays, only modified so that any tentative move is overlaid.
+#ifdef __DEBUG__
+    cout << "inCheck: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << endl;
+#endif
+    size_t hiScore = finalHiScore; // award 10 pts for a move that takes king - test check
+
+    int iPlayer = player; // allows us to play about with the player without causing confusion outside
+    bool bAI = false; // whether we are using this to grade a computer's move
+    if (hiScore > 0)
+        bAI = true;
+    bool bInCheck = false;
+
+    gameobject* pgm = const_cast<gameobject*>(this);
+    if (gm != NULL){
+        pgm = gm;
+    }
+    // i.e. either construct a copy of the actual game, or a simulated game passed in.
+
+    gameobject pm(*pgm); // proposed move
+    int ourValue, theirValue;
+    ourValue = theirValue = 0;
+
+    position nullpos; // for comparison
+    int kingValue = getCaptureValue('K');
+
+    if (startPos != nullpos){
+        // add scores for takeovers
+        //int ourValue = getCaptureValue(cboard[startPos.row][startPos.col]);
+        int theirValue = getCaptureValue(cboard[endPos.row][endPos.col]);
+
+        hiScore += theirValue * 2; //pieces taken immediately have to be more valuable than those could be taken in the net turn...
+        // add the proposed move to the copy of the board
+
+        pm.cboard[endPos.row][endPos.col] = pm.cboard[startPos.row][startPos.col];
+        pm.cboard[startPos.row][startPos.col] = '.';
+
+        for (size_t i = 0; i < pm.players[iPlayer].positions.size(); ++i){
+            if (pm.players[iPlayer].positions[i] == startPos) {
+                pm.players[iPlayer].positions[i] = endPos;
+                break;
+            }
+        }
+    }
+    else{
+        endPos = pm.players[iPlayer].positions[12]; // for when we call it to check check AFTER a move
+        // required by the en passant code to show our king isn't a pawn
+        assert (endPos.isValid());
+    }
+    // also need to remove a captured piece, if there is one.
+    for (size_t index = 0; index < pm.players[1-iPlayer].positions.size(); ++index)
+        if (pm.players[1-iPlayer].positions[index] == endPos)
+            pm.players[1-iPlayer].positions[index] = position();
+
+    // from this point on in the function, always use pm. syntax in front of members and function...
+
+    checkDirection = THEM_AGAINST_KING;
+
+    while (checkDirection != NO_MORE){
+        // go through all pieces, and all their moves - if any can move on the king, return true
+        // for each piece:
+        position targetPos = endPos;
+        if (bAI == false || (checkDirection == THEM_AGAINST_KING)){
+            targetPos = pm.players[iPlayer].positions[12];
+            // if the piece we're proposing moving is the king, then we don't want to check against where the king WAS, but rather where the king WILL BE.
+            if (basicType(pm.cboard[endPos.row][endPos.col]) == 'K')
+                targetPos = endPos;
+        }
+        else if (checkDirection == THEM_AGAINST_CURRENT)
+            targetPos = startPos;
+        else if (checkDirection == THEM_AGAINST_PIECE)
+            targetPos = endPos;
+        else if (checkDirection == US_AGAINST_KING)
+            targetPos = pm.players[iPlayer].positions[12]; // (iplayer has been reversed at this point)
+        else if (checkDirection == US_AGAINST_PIECE)
+            targetPos = endPos;
+
+        int opDir = iPlayer * 2 - 1;
+
+        for (size_t index = 0; index < pm.players[1-iPlayer].positions.size(); ++index){
+            char tPiece = pm.players[1-iPlayer].pieces[index];
+
+            position opPos (pm.players[1-iPlayer].positions[index]);
+            if (checkDirection == THEM_AGAINST_CURRENT){
+                opPos = players[1-iPlayer].positions[index];
+                // use existing grid, in case the move assumes the oppo piece is taken
+            }
+            if (!opPos.isValid())
+                continue;
+            if (checkDirection == US_AGAINST_PIECE){
+                // in this context op_pos represents our piece, and target_pos is the opponent's
+                targetPos = opPos;
+                opPos = endPos;
+                theirValue = getCaptureValue(pm.cboard[targetPos.row][targetPos.col]);
+                tPiece = pm.cboard[endPos.row][endPos.col];
+            }
+
+            // pawns
+            if (basicType(tPiece) == 'P'){
+                // for all moves, capturing or not:
+                if (checkDirection == THEM_AGAINST_PIECE && \
+                    ((targetPos.row == 0 and iPlayer == 1) || (targetPos.row == (BOARD_RANKS-1) and iPlayer == 0))){
+                    // if this will be a promotion move, the penalty should be the value of the queen
+                    ourValue = getCaptureValue('Q');
+                }
+                if (targetPos == opPos && checkDirection == US_AGAINST_PIECE){
+                    // no points for taking a piece we've already taken
+                }
+                else if (endPos == opPos && (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE)){
+                    // This piece would already have been taken, therefore it can't threaten our pieces.
+                }
+                // diagonal move creates check
+                else{
+                    if ((opPos.row + opDir == targetPos.row) && ( abs((int)opPos.col - (int)targetPos.col) == 1 )){
+                        if (!commonScoring(bInCheck, hiScore, ourValue, theirValue, kingValue, bAI, iPlayer))
+                            return true;
+                    }
+
+                    // en passant move creates check
+                    if (tPiece == 'E' && opPos.row == targetPos.row && \
+                        abs((int)opPos.col - (int)targetPos.col) == 1){
+                        if (!commonScoring(bInCheck, hiScore, ourValue, theirValue, kingValue, bAI, iPlayer))
+                            return true;
+                    }
+                }
+            }
+
+            // knight
+            if (tPiece == 'N'){
+                if (targetPos == opPos && checkDirection == US_AGAINST_PIECE){
+                    // no points for taking a piece we've already taken
+                }
+                else if (endPos == opPos && (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE)){
+                }
+                else if ((abs((int)opPos.row - (int)targetPos.row) == 1 && abs((int)opPos.col - (int)targetPos.col) == 2) || \
+                    (abs((int)opPos.col - (int)targetPos.col) == 1 && abs((int)opPos.row - (int)targetPos.row) == 2)){
+                    if (!commonScoring(bInCheck, hiScore, ourValue, theirValue, kingValue, bAI, iPlayer))
+                        return true;
+                }
+            }
+
+            // rook
+            if (basicType(tPiece) == 'R'){
+                if (targetPos == opPos && checkDirection == US_AGAINST_PIECE){
+                    // no points for taking a piece we've already taken
+                }
+                else if (endPos == opPos && (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE)){
+                }
+                else if (opPos.col == targetPos.col || opPos.row == targetPos.row){ // can't both be equal anyway
+                    if (opPos == targetPos)
+                        continue;
+                    // direction is OK, at least. Now check what's in the way...
+                    size_t distance = max( abs((int)opPos.col - (int)targetPos.col), abs((int)opPos.row - (int)targetPos.row));
+                    if (pm.checkPath(opPos, targetPos, distance, false, true, iPlayer, false)){ // returns True if the target can be captured
+                        if (!commonScoring(bInCheck, hiScore, ourValue, theirValue, kingValue, bAI, iPlayer))
+                            return true;
+                    }
+                }
+                // not assuming check:
+                if (checkDirection == US_AGAINST_KING){
+                    if ((abs((int)opPos.col - (int)targetPos.col) == 2 && abs((int)opPos.row - (int)targetPos.row) == 1) || \
+                        (abs((int)opPos.col - (int)targetPos.col) == 2 && abs((int)opPos.row - (int)targetPos.row) == 1))
+                        hiScore += 2; // small incentive for a move close enough to cut the king's moves, even if it's not check
+                }
+            }
+            // bishop
+            if (tPiece == 'B'){
+                if (targetPos == opPos && checkDirection == US_AGAINST_PIECE){
+                    // no points for taking a piece we've already taken
+                }
+                else if (endPos == opPos && (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE)){
+                }
+                else if (abs((int)opPos.col - (int)targetPos.col) == abs((int)opPos.row - (int)targetPos.row)){ // horizontal distance = vertical
+                    // direction is OK, at least. Now check what's in the way...
+                    size_t distance = abs((int)opPos.col - (int)targetPos.col);
+                    if (pm.checkPath(opPos, targetPos, distance, false, true, iPlayer, false)){
+                        if (!commonScoring(bInCheck, hiScore, ourValue, theirValue, kingValue, bAI, iPlayer))
+                            return true;
+                    }
+                }
+                // not assuming check:
+                if (checkDirection == US_AGAINST_KING){
+                    if ( (abs((int)opPos.col) - (int)targetPos.col == 2) && (abs((int)opPos.row - (int)targetPos.row) == 2) )
+                        hiScore += 3; // incentive for a move close enough to cut the king's moves
+                }
+            }
+
+            // queen or king
+            if (basicType(tPiece) == 'K' || tPiece == 'Q'){
+                if (targetPos == opPos && checkDirection == US_AGAINST_PIECE){
+                    // no points for taking a piece we've already taken
+                }
+                else if (endPos == opPos && (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE)){
+                }
+                else if (abs((int)opPos.col - (int)targetPos.col) == abs((int)opPos.row - (int)targetPos.row) || \
+                    (opPos.col == targetPos.col or opPos.row == targetPos.row)){
+                    // direction is OK, at least. Now check what's in the way...
+                    assert (opPos != targetPos);
+                    if (opPos == targetPos)
+                        continue;
+                    size_t distance = max( abs((int)opPos.col - (int)targetPos.col) ,	\
+                        max(abs((int)opPos.col - (int)targetPos.col), abs((int)opPos.row - (int)targetPos.row)) );	// if h/v
+                    if (distance == 1 || tPiece == 'Q'){ // Kings can only move one space
+                        if (pm.checkPath(opPos, targetPos, distance, false, true, iPlayer, false)){
+                            if (!commonScoring(bInCheck, hiScore, ourValue, \
+                                theirValue, kingValue, bAI, iPlayer))
+                                return true;
+                        }
+                    }
+                }
+                // not assuming check:
+                if (checkDirection == US_AGAINST_KING){
+                    if (abs((int)opPos.col - (int)targetPos.col) == 2 || \
+                        abs((int)opPos.row - (int)targetPos.row) == 2)
+                        hiScore += 2; // incentive for a move close enough to cut the king's moves
+                }
+            }
+
+        }
+
+        if (bAI){
+            checkDirection = static_cast<looptype>((int)checkDirection + 1);
+            if (checkDirection == US_AGAINST_KING)
+                iPlayer = 1 - iPlayer;
+            else if (checkDirection == US_AGAINST_PIECE)
+                iPlayer = 1 - iPlayer;
+#ifdef __DEBUG__
+            cout << "checkDirection = " << (int)checkDirection << endl;
+#endif
+        }
+        else checkDirection = NO_MORE;
+    }
+
+    // penalise the move if we moved the same piece in the previous turn
+    if (bAI){
+        if (players[iPlayer].pieces[players[iPlayer].lastPieceMoved] == pm.cboard[startPos.row][startPos.col]){
+            hiScore -=3;
+            if (pm.cboard[startPos.row][startPos.col] == 'Q' && getNumPieces(1-iPlayer) < 4){
+                // penalise the move if we moved the same queen in the previous turn (in addition to the general penalty below)
+                // this will give other pieces the chance to move in for the kill in the end game
+                hiScore -= 5;
+            }
+        }
+    }
+    finalHiScore = hiScore;
+    //hiSc = finalHiScore
+    if (!bAI)
+        return false;
+    else
+        return bInCheck;
+}
+
+bool gameobject::checkPath(const position& startPos, const position& endPos, const int& distance, const bool& bDestEmpty, const int& theirPiece, const size_t& iPlayer, bool bCheckCheck){
+    // any direction
+    int dirDown = ((int)endPos.row - (int)startPos.row) / distance; // i.e. can be -1, 0, or 1
+    int dirRight = ((int)endPos.col - (int)startPos.col) / distance;
+#ifdef __DEBUG__
+    cout << "checkPath: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << " dirDown=" << dirDown << " dirRight=" << dirRight << endl;
+#endif
+
+    for (int i = 1; i <  distance; ++i){
+        int colMovement = dirRight * i;
+        int rowMovement = dirDown * i;
+        position test(startPos.row + rowMovement, startPos.col + colMovement);
+        if (!test.isValid())
+            break;
+        if (cboard[startPos.row + rowMovement][startPos.col + colMovement] != '.'){
+            if (bConsole) cout << "Move invalid - intercepting piece found: " << cboard[startPos.row + rowMovement][startPos.col + colMovement] << endl;
+            return false; // can't take the piece if it's only on the way, and it can't be our own
+        }
+        if (bCheckCheck){
+            // further check required - this position may be empty, but for the castling we need to
+            // know it cannot be attacked by another piece. In effect, we test as if the king were
+            // in that space.
+            size_t dummyScore = 0;
+            if (inCheck(iPlayer, dummyScore, startPos, endPos, NULL))
+                return false;
+        }
+    }
+
+    // final check - the destination square:
+    if (bDestEmpty || theirPiece != -1)
+        return true;
+    else
+        return false;
+}
+
+bool gameobject::scoreDirectionsLoop(size_t i, char p, bool bMove, string& sMove, size_t hiScore, position ourPos, size_t iPlayer){
+    const int NUM_DIRS = 4 * (1 + (basicType(p) == 'K' or p == 'Q'));
+    size_t numOurPieces = getNumPieces(iPlayer);
+    size_t numTheirPieces = getNumPieces(1 - iPlayer);
+    int dx, dy;
+    size_t moveScore;
+
+    for (int dir = 0; dir < NUM_DIRS; ++dir){
+        if (basicType(p) == 'R'){
+            dx = dy = 0;
+            if (dir == 0) dx = -1;
+            else if (dir == 1) dx = 1;
+            else if (dir == 2) dy = -1;
+            else if (dir == 3) dy = 1;
+        }
+        else if (p == 'B'){
+            dx = dy = -1;
+            if (dir == 0) dx = dy = 1;
+            else if (dir == 1) dx = 1;
+            else if (dir == 2) dy = 1;
+        }
+        else if (basicType(p) == 'K' or p == 'Q'){
+            dx = dy = 0;
+            if (dir == 0) dy = -1;
+            else if (dir == 1){
+                dx = 1;
+                dy = -1;
+            }
+            else if (dir == 2) dx = 1;
+            else if (dir == 3) dx = dy = 1;
+            else if (dir == 4) dy = 1;
+            else if (dir == 5){
+                dx = -1;
+                dy = 1;
+            }
+            else if (dir == 6) dx = -1;
+            else if (dir == 7) dx = dy = -1;
+        }
+
+        position endPos (ourPos.row, ourPos.col);
+        // size_t offset = 1;
+        bool bCont = true;
+        while (bCont){
+            endPos.row = endPos.row + dy;
+            endPos.col = endPos.col + dx;
+            // in bounds?
+            if (!endPos.isValid())
+                bCont = false;
+            else{
+                if (!isOurs(endPos, iPlayer)){ //  possible
+                    moveScore = 1001;
+                    if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
+                        if (bMove){
+                            // TO DO:
+                            /*pastmove pmv(ourPos, endPos);
+                            if (players[iPlayer].pieceMoves[i].pastmoveSet[tuple(pmv)] > 0)
+                                pm2 = tuple(pmv);
+                            for l in players[iplayer].pieceMoves[i].pastmoveSet.elements():
+                                s1, s2, s3, s4 = l
+                                if ourPos.row == s1 && ourPos.col == s2 && endPos.row == s3 && endPos.col == s4:
+                                    moveScore -= s.players[iPlayer].pieceMoves[i].pastmoveSet[l] * 3 # i.e. penalise repeat moves
+                                    break;*/
+                            if (p == 'B'){
+                                if (offBackline(ourPos,endPos, 2, iPlayer))
+                                    moveScore += 2;
+                            }
+                            if (basicType(p) == 'K'){
+                                if ((numOurPieces < numTheirPieces) && (numOurPieces < 5) && (ourPos.row != (iPlayer*(BOARD_RANKS - 1))) \
+                                    && (endPos.row == (iPlayer * (BOARD_RANKS-1))))
+                                    moveScore -= 2; // subtle hint not to move king into the far home corner in the later stages when under pressure
+                            }
+                            if (hiScore < moveScore){
+                                sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                            }
+                        }
+                        else{
+                            // False indicates only that we are not scoring - i.e. there is a valid move, therefore no further processing required
+                            return false;
+                        }
+                    }
+                    if (isOurs(endPos, 1-iPlayer)) // theirs - we can't go on then
+                        bCont = false;
+                }
+                else
+                    bCont = false;
+            }
+            if (players[iPlayer].pieces[i] == 'L' && dy == 0 && abs((int)endPos.col - (int)ourPos.col) == 2){
+                // castling - taken from validate_move
+
+                // Castling is permissible if and only if all of the following conditions hold:
+                // 1. The king and the chosen rook are on the player's first rank.
+                // 2. Neither the king nor the chosen rook have previously moved.
+                //    (Use L for an unmoved king, and S for an unmoved rook)
+
+                position rookPos;
+                if (cboard[iPlayer*(BOARD_RANKS-1)][0] == 'S' && cboard[iPlayer*(BOARD_RANKS-1)][4] == 'L' \
+                    && ourPos.col == 4 && endPos.col == 2)
+                    rookPos.col = 0;
+                else if (cboard[iPlayer*(BOARD_RANKS-1)][7] == 'S' && cboard[iPlayer*(BOARD_RANKS-1)][4] == 'L' && \
+                    ourPos.col == 4 && endPos.col == 6)
+                    rookPos.col = 7;
+                else
+                    bCont = false; // one or both of the king and the rook have moved from their starting position (even if they've since returned
+                rookPos.row = iPlayer*(BOARD_RANKS-1);
+
+                // TO DO: is theirPiece really a bool?
+                int theirPiece = isOurs(endPos,1 - iPlayer) - 1; // technically this requires an actual index but for the moment, -1 means not theirs
+                bool bDestEmpty = ((!isOurs(endPos,1 - iPlayer)) && (not isOurs(endPos,iPlayer)));
+
+                // 3. There are no pieces between the king and the chosen rook (NOT merely where the king moves to.)
+                if (!checkPath(ourPos, rookPos, abs((int)endPos.col - (int)ourPos.col), bDestEmpty, theirPiece, iPlayer,false))
+                    bCont = false;
+
+                // 4. The king is not currently in check.
+                moveScore = 0;
+
+                if (inCheck(iPlayer, moveScore, position(), position(), NULL))
+                    bCont = false;
+
+                // 5. The king does not pass through a square that is attacked by an enemy piece.
+                //    - Oh bloody hell. Modify check_path to call in_check for every square it passes through...
+                if (!checkPath(ourPos, endPos, abs((int)endPos.col - (int)ourPos.col), bDestEmpty, theirPiece, iPlayer, true))
+                    bCont = false;
+
+                // 6. The king does not end up in check. (True of any legal move.)
+                // Rook manouevre is already proven as valid
+                moveScore = 1003;
+
+                if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){ // new king pos, NOT the rook pos...
+                    if (bMove){
+                        /*pastmove pmv(ourPos, endPos);
+                        moveScore -= players[iPlayer].pieceMoves[i].pastmoveSet[tuple(pmv)] * 3 // i.e. penalise repeat moves*/
+                        if (hiScore < moveScore)
+                            sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                    }
+                    else
+                        return false;
+                }
+                else
+                    bCont = false;
+                // The move is good
+            }
+            if (basicType(players[iPlayer].pieces[i]) == 'K')
+                bCont = false; // Kings can only move one space
+        }
+    }
     return true;
-    // TO DO
+}
+
+string gameobject::createProspectiveMove(size_t& hiScore, size_t moveScore, const position ourPos, const position endPos) const{
+    hiScore = moveScore;
+    return createMove(ourPos, endPos);
+}
+
+bool gameobject::isStalemate(){
+    // TO DO:
+    return false;
+}
+
+string gameobject::gameDetails(){
+    string gameDetails = players[cPlayer].name + "'s turn";
+    return gameDetails;
+}
+bool gameobject::inCheckMate(const size_t& iPlayer, const bool bMove){
+    // player here represents the next player, after the last move. We want to know if our player has any possible move.
+    // Loop through every piece.
+    int ourDir = 1 - iPlayer * 2;
+    size_t hiScore = 0;
+    string sMove;
+    size_t moveScore = 1000;
+
+    // to evaluate in random order...
+    srand ( unsigned ( time(0) ) );
+    vector<int> myIndexes;
+
+    for (size_t iv = 0; iv < players[iPlayer].positions.size(); ++iv) myIndexes.push_back(iv);
+        random_shuffle ( myIndexes.begin(), myIndexes.end() );
+
+    // int inds[16] = {8,3,12,13,9,11,2,6,5,7,0,1,15,4,10,14};
+    // vector<int> my_indexes(inds, inds+16);
+    // use the above if we want to test this version against the python version
+
+    position opKingPos(position(players[1 - iPlayer].positions[0]));
+
+    for (size_t ind = 0; ind < players[iPlayer].positions.size(); ++ind){
+        // translate from index array - this should make it consider moves from all the same pieces, in a random order
+        int i = myIndexes[ind];
+        position ourPos = players[iPlayer].positions[i];
+        if (!ourPos.isValid())
+            continue; // this piece was taken already
+        position endPos;
+
+        // pawns
+        // diagonal move creates check
+        char p = players[iPlayer].pieces[i];
+        if (basicType(p) == 'P'){
+            // one forward
+            endPos.row = ourPos.row + ourDir;
+            endPos.col = ourPos.col;
+            if (!isOurs(endPos, iPlayer) && !isOurs(endPos, 1 - iPlayer)){
+                moveScore = 1002;
+                if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
+                    // this would get us out of check - we can leave now
+                    if (bMove){
+                        if ((ourPos.col > 0 && cboard[iPlayer * (BOARD_RANKS - 1)][ourPos.col - 1] == 'B') || \
+                            (ourPos.col < (BOARD_FILES - 1) && cboard[iPlayer * (BOARD_RANKS -1)][ourPos.col + 1] == 'B')){
+                            // frees a bishop
+                            moveScore += 2;
+                        }
+                        if (toEndline(endPos, iPlayer)){
+                            moveScore += 4;
+                        }
+                        if (hiScore < moveScore){
+                            sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                        }
+                    }
+                    else
+                        return false;
+                }
+            }
+            // two forward
+            if ((ourPos.row == 1 && ourDir == 1) || (ourPos.row == (BOARD_RANKS-1) && ourDir == -1)){
+                endPos.row = int(ourPos.row + ourDir * 2);
+                endPos.col = int(ourPos.col);
+                if (!isOurs(endPos, iPlayer)){
+                    if (cboard[endPos.row][endPos.col] == '.' && cboard[int((ourPos.row + endPos.row)/2)][int(ourPos.col)] == '.'){
+                        moveScore = 1003;
+                        if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
+                            if (bMove){
+                                if ((ourPos.col > 0 && cboard[iPlayer * (BOARD_RANKS-1)][ourPos.col - 1] == 'B') || \
+                                    (ourPos.col < (BOARD_FILES - 1) && cboard[iPlayer * (BOARD_RANKS - 1)][ourPos.col + 1] == 'B')){
+                                    // frees a bishop
+                                    moveScore += 2;
+                                }
+                                if (hiScore < moveScore){
+                                    sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                                }
+                            }
+                            else
+                                return false;
+                        }
+                    }
+                }
+            }
+            // diagonals, taking a piece
+            // try left, then right:
+            for (int epDir = -1; epDir < 2; epDir += 2){
+                if ((ourPos.col + epDir) < BOARD_FILES){
+                    endPos.row = ourPos.row + ourDir;
+                    endPos.col = ourPos.col + epDir;
+                    position epPos(ourPos.row, endPos.col);
+                    if (isOurs(endPos, 1 - iPlayer) && !(isOurs(epPos, 1 - iPlayer) && cboard[ourPos.row][endPos.col] == 'E')){
+                        // if we call is_ours with the other player, it's effectively an "isTheirs" function
+                        // this comparison also makes sure we don't steal the en passant case below
+                        moveScore = 1002;
+                        if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
+                            if (bMove){
+                                if (toEndline(endPos, iPlayer))
+                                    moveScore += 4;
+                                if (hiScore < moveScore){
+                                    sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                                }
+                            }
+                            else
+                                return false;
+                        }
+                    }
+                }
+            }
+
+            // en passant - possibly still taking a piece
+            // diagonals, taking a piece
+            // try left, then right:
+            for (int epDir = -1; epDir < 2; epDir += 2){
+                if (((ourPos.col + epDir) < BOARD_FILES)){
+                    endPos.row = ourPos.row + ourDir;
+                    endPos.col = ourPos.col + epDir;
+                    position epPos(ourPos.row, endPos.col);
+                    if (epPos.isValid() && !isOurs(endPos, iPlayer)){
+                        // here it gets difficult. It isn't enough to pass in the normal diagonal move,
+                        // because the pawn we take en passant may also affect check. So we will
+                        // create a temporary modified board for this single circumstance and
+                        // pass a reference to it to check in, AND the diagonal move.
+                        if (isOurs(epPos, 1-iPlayer) && cboard[ourPos.row][endPos.col] == 'E'){
+                            gameobject gm(*this); // proposed move
+                            // now replace the captured en passant pawn
+                            gm.cboard[ourPos.row][endPos.col] = '.';
+                            for (size_t index = 0; index < gm.players[1-iPlayer].positions.size(); ++index ){
+                                if (gm.players[1 - iPlayer].positions[index] == epPos)
+                                    gm.players[1 - iPlayer].positions[index] = position();
+                            }
+                            // if it turns out the position we move the pawn into also contains an opposing piece, this will be handled explicity in in_check.
+                            moveScore = 1004;
+                            if (!inCheck(iPlayer, moveScore, ourPos, endPos, &gm)){
+                                if (bMove){
+                                    if (hiScore < moveScore){
+                                        sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                                    }
+                                }
+                                else
+                                    return false;
+                            }
+                        }
+                    }
+                }
+            }
+            // finally, promotion doesn't matter for determining check-mate, as a piece of any type can't move until the next go anyway
+        }
+        else if (p == 'N'){
+            // the eight combinations:
+            for (int y = -2; y < 3; ++y){
+                for (int x = -2; x < 3; ++x){
+                    if (x == 0 || y == 0) continue;
+                    endPos.row = ourPos.row;
+                    endPos.col = ourPos.col;
+                    if (abs(x) != abs(y)){
+                        endPos.row = endPos.row + y;
+                        endPos.col = endPos.col + x;
+                        if (!endPos.isValid())
+                            continue; // out of bounds - try next combo
+                        if (!isOurs(endPos, iPlayer)){
+                            moveScore = 1001;
+                            if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
+                                if (bMove){
+                                    /*pastmove pmv(ourPos, endPos);
+                                    if (players[iPlayer].pieceMoves[i].pastmoveSet[tuple(pmv)] > 0)
+                                        pm2 = tuple(pmv);
+                                    for (l in players[iPlayer].pieceMoves[i].pastmoveSet.elements()){
+                                        s1, s2, s3, s4 = l;
+                                        if (ourPos.row == s1 && ourPos.col == s2 && endPos.row == s3 && endPos.col == s4){
+                                            moveScore -= players[iPlayer].pieceMoves[i].pastmoveSet[l] * 3; // i.e. penalise repeat moves
+                                            break;
+                                        }
+                                    }*/ // TO DO
+                                    if (offBackline(ourPos,endPos, 2, iPlayer))
+                                        moveScore += 2;
+                                    if (hiScore < moveScore){
+                                        sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
+                                    }
+                                }
+                                else
+                                    return false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (basicType(p) == 'R' || p == 'B' || basicType(p) == 'K' || p == 'Q'){
+            if (!scoreDirectionsLoop(i, p, bMove, sMove, hiScore, ourPos, iPlayer)){
+                // False indicates only that we are not scoring - i.e. there is a valid move, therefore no further processing required
+                return false;
+            }
+        }
+    }
+    if (hiScore > 0 && bMove){
+        movePiece(sMove, iPlayer, true); // computer makes a move for us
+        if (bImages) cout << sMove << endl;
+    }
+    return true;
 }
 
 void gameobject::printBoard(){
@@ -740,9 +1428,8 @@ return;
 #endif
 #endif
     cout << setfill('_') << setw(65) << "" << endl;
-#ifndef __DEBUG
-    cout << endl << "Type 'load', 'save', 'new', 'quit', or a move e.g. (a1-b2)" << endl << "Type 'help' for a full list of instructions." << endl << endl;
-#endif
+    if (!bImages) cout << endl << "Type 'load', 'save', 'new', 'quit', or a move e.g. (a1-b2)" << endl << "Type 'help' for a full list of instructions." << endl << endl;
+
     string y = "ABCDEFGH";
     cout << "     A  B  C  D  E  F  G  H" << endl;
     cout << "   " << (char)201 << setw(23) << setfill((char)205) << "" << (char) 187 << endl;
@@ -781,15 +1468,6 @@ return;
     cout << "     A  B  C  D  E  F  G  H" << endl;
 }
 
-
-bool toEndline(const position& endPos, const size_t& player){
-    return endPos.row == (1-player)*7;
-}
-
-bool offBackline(const position& ourPos, const position& endPos, const size_t& distance, const size_t& player){
-    return (ourPos.row == player*7) && (abs((int)endPos.row - (int)ourPos.row) >= (int)distance);
-}
-
 // copy constructor
 player::player(const player& pl){
     for (vector<position>::const_iterator itr = pl.positions.begin(); itr < pl.positions.end(); ++itr)
@@ -808,18 +1486,37 @@ player::player(const player& pl){
 
 void ChessGUI::initialise(){
     //initialise, otherwise errors on loading QML:
-    if (bImages)
-    {
-        for (int r = 1; r < (BOARD_RANKS + 1); ++r){
-            for (int c = 1; c < (BOARD_FILES + 1); ++c){
-                string ref = getBoardRef(c, r);
-                string strImageName = "image" + ref;
-                string strImageOpacity = "opacity" + ref;
+    for (int r = 0; r < BOARD_RANKS; ++r){
+        for (int c = 0; c < BOARD_FILES; ++c){
+            // TO DO: could probably adapt setStateOrigin() to handle all this now
+            string ref = getBoardRef(c, r);
+            string strImageName = "image" + ref;
+            string strImageOpacity = "opacity" + ref;
+            stringstream ss, ss2;
+            string sx, sy;
+            ss << ((c+1) * 50);
+            ss >> sx;
+            ss2 << ((r+1) * 50);
+            ss2 >> sy;
+            string strImageX = "x" + ref;
+            string strImageY = "y" + ref;
+            string strImageZ = "z" + ref;
+            if (bImages)
+            {
                 pView->rootContext()->setContextProperty(strImageName.c_str(), "");
                 pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
+                pView->rootContext()->setContextProperty(strImageX.c_str(), sx.c_str());
+                pView->rootContext()->setContextProperty(strImageY.c_str(), sy.c_str());
+                pView->rootContext()->setContextProperty(strImageZ.c_str(), "1");
             }
         }
     }
+
+    pView->rootContext()->setContextProperty("appState", "");
+    pView->rootContext()->setContextProperty("statusText", pGame->gameDetails().c_str());
+
+    //initialise stateOrigin
+    setStateOrigin('p', position(0,0));
 }
 
 void ChessGUI::boardClick(int x, int y){
@@ -862,6 +1559,47 @@ void ChessGUI::boardClick(int x, int y){
     }
 }
 
+void ChessGUI::executeMove(string cmd){
+    // This will handle those aspects common to both human and computer moves, including changing player
+    size_t score = 0;
+    pGame->cPlayer = 1 - pGame->cPlayer;
+    string labelText = pGame->gameDetails();
+    if (pGame->inCheck(pGame->cPlayer, score, position(), position(), NULL)){
+        labelText += "\nCHECK";
+    }
+    if (pGame->inCheckMate(pGame->cPlayer, false)){
+        string msg = "CHECK MATE : " + pGame->players[1 - pGame->cPlayer].name + " wins";
+        labelText += "\n" + msg;
+        showMessage(msg);
+        pGame->bGameOver = true;
+        pGame->players[0].bComputer = false;
+        pGame->players[1].bComputer = false;
+    }
+    else if (pGame->isStalemate()){
+        labelText += "\nThe game is A DRAW - the same move has been made three times now.";
+        pGame->bGameOver = true;
+        pGame->players[0].bComputer = false;
+        pGame->players[1].bComputer = false;
+    }
+    else if (pGame->cPlayer == 1){
+        pGame->turn += 1;
+    }
+    if (pGame->turn > MAX_TURNS){
+        char t[4];
+        itoa(MAX_TURNS, t, 10);
+        string msg = "DRAW - ";
+        msg += t;
+        msg += " moves have been made without victory." ;
+        showMessage(msg);
+        pGame->bGameOver = true;
+        pGame->players[0].bComputer = false;
+        pGame->players[1].bComputer = false;
+    }
+
+    labelText += "\n\n(" + pGame->players[1 - pGame->cPlayer].name + "'s move: " + cmd + ")";
+    pView->rootContext()->setContextProperty("statusText", labelText.c_str());
+}
+
 bool ChessGUI::move(){
     if (!pGame->bGameOver){
         stringstream ss;
@@ -870,7 +1608,7 @@ bool ChessGUI::move(){
         string cmd = pGame->createMove(pGame->GUImoveStart, pGame->GUImoveEnd);
         if (pGame->validateMove(cmd, pGame->cPlayer)){
             pGame->movePiece(cmd, pGame->cPlayer);
-            //executeMove(cmd); // TO DO. This will handle those aspects common to both human and computer moves, including changing player
+            executeMove(cmd);
             return true;
         }
     }
@@ -888,6 +1626,8 @@ void ChessGUI::setStateOrigin(char p, position pos){
         ss >> sx;
         ss2 << ((pos.row + 1) * 50);
         ss2 >> sy;
+        if (pGame->cPlayer == 1) // just switched to player 2 in executeMove
+            p = tolower(p); // To signal this is black, as setSquareImage has no context
         string strImage = setSquareImage(p, pos.row, pos.col);
         pView->rootContext()->setContextProperty("imageStateOrigin", strImage.c_str());
         pView->rootContext()->setContextProperty("xStateOrigin", sx.c_str());
@@ -962,8 +1702,7 @@ string ChessGUI::getBoardRef(int x, int y) const{
 
 string ChessGUI::setSquareImage(char& p, int row, int col) const{
     string strImage;
-    position pos(row,
-                 col);
+    position pos(row,col);
     char btp = pGame->basicType(p);
 
     for (position each: pGame->players[0].positions){
@@ -1017,9 +1756,11 @@ void ChessGUI::displayBoardImages() const{
             }
         }
     }
-    else{
-        // TO DO: bother to create a text alternative?
-    }
+}
+
+void ChessGUI::recreateBoard() const{
+    displayBoardImages();
+    pView->rootContext()->setContextProperty("statusText", pGame->gameDetails().c_str());
 }
 
 void ChessGUI::showMessage(string msg) const{
@@ -1030,30 +1771,48 @@ void ChessGUI::showMessage(string msg) const{
     msgBox.exec();
 }
 
-// Stubs
+// Message handlers
 
 void ChessGUI::newClick() const{
-    showMessage("New game");
+    pGame->newGame();
+    recreateBoard();
 }
 
 void ChessGUI::saveClick() const{
-    showMessage("Save game");
+    if (!pGame->saveGame()){
+        string error = "Game could not be saved.";
+        if (bImages)
+            showMessage(error);
+        else
+            cout << error << endl;
+    }
 }
 
 void ChessGUI::loadClick() const{
-    showMessage("Load game");
+    if (pGame->loadGame()){
+        recreateBoard();
+    }
+    else{
+        string error = "No saved game was found.";
+        if (bImages)
+            showMessage(error);
+        else
+            cout << error << endl;
+    }
 }
 
+// Stubs
+
 void ChessGUI::humanClick() const{
-    showMessage("Player takes control of computer user");
+    showMessage("Stub: Player takes control of computer user");
 }
 
 void ChessGUI::computerClick() const{
-    showMessage("Computer takes control");
+    showMessage("Stub: Computer takes control");
 }
 
 void ChessGUI::computerMoveClick() const{
-    showMessage("Computer plays move for user");
+    showMessage("Stub: Computer plays move for user");
 }
 
 // State notifications
@@ -1064,6 +1823,18 @@ void ChessGUI::transitionComplete(){
 
 void ChessGUI::moveReady(){
     //showMessage("Move ready");
+}
+
+//-----------------------------------------------------------------------------------------
+//  Console
+//-----------------------------------------------------------------------------------------
+
+string userInput(){
+    cout << "\n> ";
+    string cmd;
+    cin >> cmd;
+    transform(cmd.begin(), cmd.end(), cmd.begin(), ::tolower);
+    return cmd;
 }
 
 //-----------------------------------------------------------------------------------------
@@ -1078,40 +1849,10 @@ int main(int argc, char *argv[])
 
     gameobject game;
     game.newGame();
+
+#ifdef __GUI__
     ChessGUI chessGUI(&game, &viewer);
-
-    //chessGUI.initialise(); // TO DO - would be better
-
-    //initialise, otherwise errors on loading QML:
-    for (int r = 0; r < BOARD_RANKS; ++r){
-        for (int c = 0; c < BOARD_FILES; ++c){
-            // TO DO: could probably adapt setStateOrigin() to handle all this now
-            string ref = chessGUI.getBoardRef(c, r);
-            string strImageName = "image" + ref;
-            string strImageOpacity = "opacity" + ref;
-            stringstream ss, ss2;
-            string sx, sy;
-            ss << ((c+1) * 50);
-            ss >> sx;
-            ss2 << ((r+1) * 50);
-            ss2 >> sy;
-            string strImageX = "x" + ref;
-            string strImageY = "y" + ref;
-            string strImageZ = "z" + ref;
-            if (bImages)
-            {
-                viewer.rootContext()->setContextProperty(strImageName.c_str(), "");
-                viewer.rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
-                viewer.rootContext()->setContextProperty(strImageX.c_str(), sx.c_str());
-                viewer.rootContext()->setContextProperty(strImageY.c_str(), sy.c_str());
-                viewer.rootContext()->setContextProperty(strImageZ.c_str(), "1");
-            }
-        }
-    }
-
-    viewer.rootContext()->setContextProperty("appState", "");
-    //initialise stateOrigin
-    chessGUI.setStateOrigin('P', position(0,0));
+    chessGUI.initialise();
 
     viewer.setMainQmlFile(QStringLiteral("qml/Chess/main.qml"));
     viewer.setIcon(QIcon("qml/Chess/chess.ico"));
@@ -1148,7 +1889,126 @@ int main(int argc, char *argv[])
                         &chessGUI, SLOT(moveReadySlot()));
 
     chessGUI.displayBoardImages();
-
     return app.exec();
-}
+#endif
+    // console mode goes here...
+    cout << "Chess\n";
+    cout << "=====\n";
+    string cmd;
+    while (true){
+        size_t score = 0;
+        // signals we're not valuing a move for AI (1000+ if so)
+        cout << game.players[game.cPlayer].name + "'s turn:\n";
 
+        if (game.turn > MAX_TURNS){
+            cout << "\nThe game is A DRAW - " << MAX_TURNS << " moves have been made without victory.\n";
+            game.bGameOver = true;
+            game.players[0].bComputer = false;
+            game.players[1].bComputer = false;
+        }
+
+        if (game.players[game.cPlayer].bComputer)
+            cmd = "play";
+        else
+            cmd = userInput();
+
+        // All these calls should be covered by their own exception handling. If they fail, they
+        // don't necessarily prevent other options from working, so we don't quit the program.
+        if (cmd == "exit") break;
+        if (cmd == "new"){
+            game.turn = 1;
+            game.cPlayer = 1;
+            game.newGame();
+            game.bGameOver = false;
+        }
+        else if (cmd == "save")
+            game.saveGame();
+        else if (cmd == "open"){
+            if (game.loadGame())
+                game.bGameOver = false;
+            else
+                cout << "\nNo saved game was found.\n\n";
+        }
+        //else if (cmd == "all")
+        //    game.printAllVariables();
+        else if (cmd == "board")
+            game.printBoard();
+        //else if (cmd == "pastmoves")
+        //    game.printPastMoves();
+        //else if (cmd == "stats")
+        //    showStats();
+        //else if (cmd == "pieces")
+        //    printPieces();
+        //else if (cmd == "help")
+        //    game.showHelp();
+        else if (cmd == "checkcheck"){ // for debug only
+            if (game.inCheck(game.cPlayer, score, position(), position(), NULL ))
+                cout << "\nCHECK\n\n";
+            else
+                cout << "\nNo check\n\n";
+        }
+        else if (cmd == "computer"){
+            if (!game.players[game.cPlayer].bComputer){
+                game.players[game.cPlayer].bComputer = true;
+                cout << "\nThe computer now has control of this player.\n\n";
+            }
+            else
+                cout << "\nThe computer already has control of this player.\n\n";
+        }
+        else if (cmd == "me"){
+            if (game.players[1-game.cPlayer].bComputer == true){
+                game.players[game.cPlayer].bComputer = false;
+                cout << "\nYou now have control of the other player.\n\n";
+            }
+            else
+                cout << "\nYou already have control of the other player.\n\n";
+        }
+        else if (cmd == "play"){
+            game.computerTurn(game.cPlayer); // finds a move and makes it
+            game.cPlayer = !game.cPlayer;
+            if (game.inCheck(game.cPlayer, score, position(), position(), NULL))
+                cout << "\nCHECK\n";
+            if (game.inCheckMate(game.cPlayer, false)){
+                cout << "CHECK MATE\n";
+                cout << game.players[1-game.cPlayer].name + " wins\n";
+                game.bGameOver = true;
+                game.players[0].bComputer = false;
+                game.players[1].bComputer = false;
+            }
+            else if (game.isStalemate()){
+                cout << "\nThe game is A DRAW - the same move has been made three times now.\n";
+                game.bGameOver = true;
+                game.players[0].bComputer = false;
+                game.players[1].bComputer = false;
+            }
+            else if (game.cPlayer == 1)
+                game.turn += 1;
+        }
+        else if (!game.bGameOver){
+            // maybe this is an actual move then!
+            if (game.validateMove(cmd, game.cPlayer)){
+                cout << cmd << endl;
+                game.movePiece(cmd, game.cPlayer);
+                game.cPlayer = 1 - game.cPlayer;
+                if (game.inCheck(game.cPlayer, score, position(), position(), NULL))
+                    cout << "CHECK\n";
+                if (game.inCheckMate(game.cPlayer, false)){
+                    cout << "\nCHECK MATE\n";
+                    cout << game.players[1-game.cPlayer].name + " wins\n";
+                    game.bGameOver = true;
+                    game.players[0].bComputer = false;
+                    game.players[1].bComputer = false;
+                }
+                else if (game.isStalemate()){
+                    cout << "\nThe game is A DRAW - the same move has been made three times now.\n";
+                    game.bGameOver = true;
+                    game.players[0].bComputer = false;
+                    game.players[1].bComputer = false;
+                }
+                else if (game.cPlayer == 1)
+                    game.turn += 1;
+            }
+        }
+    }
+    return 0;
+}
