@@ -22,6 +22,7 @@ class pastmove{
 public:
     position startPos;
     position endPos;
+    pastmove():startPos(position()),endPos(position()){}
     pastmove(position start, position end):startPos(start),endPos(end){}
     // to go in a set, these need a copy constructor(member) and comparison operators (external)
     pastmove(const pastmove& pm){
@@ -44,11 +45,6 @@ public:
             grid.push_back(g[i]);
         }
     }
-    // to go in a set, these need a copy constructor(member) and comparison operators (external)
-    /*pastmove(const pastmove& pm){
-        startPos = pm.startPos;
-        endPos = pm.endPos;
-    }*/
 };
 
 class pastboards{
@@ -69,6 +65,7 @@ public:
         setPieces();
         name = n;
     }
+    pastmove lastMove;
     player(const player& pl);
     position& getPosition(size_t index){return positions[index];}
     void pushBackPos(position pos){positions.push_back(pos);}
@@ -133,6 +130,7 @@ class ChessGUI : public QObject
 {
     Q_OBJECT
 public:
+    bool bProcessing;
     ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV){pGame = pg; pView = pV;}
     void displayBoardImages() const;
     void initialise();
@@ -145,28 +143,33 @@ private:
     void saveClick() const;
     void loadClick() const;
     void humanClick() const;
-    void computerClick() const;
-    void computerMoveClick() const;
+    void computerClick();
+    void computerMoveClick();
     void transitionComplete();
     void completeMove();
     bool move();
-    void displayMove();
     void moveReady();
     std::string setSquareImage(char& p, int row, int col) const;
-    void executeMove(std::string cmd);
     void recreateBoard() const;
     gameobject* pGame;
     QtQuick2ApplicationViewer* pView;
+    void play();
+    void executeMove(std::string cmd);
+    void displayMove();
+signals:
+    void signalMoveReady();
+
 public:
     Q_INVOKABLE void boardClickSlot(int x, int y) {boardClick(x,y);}
     Q_INVOKABLE void newSlot() const {newClick();}
     Q_INVOKABLE void saveSlot() const {saveClick();}
     Q_INVOKABLE void loadSlot() const {loadClick();}
     Q_INVOKABLE void humanSlot() const {humanClick();}
-    Q_INVOKABLE void computerSlot() const {computerClick();}
-    Q_INVOKABLE void computerMoveSlot() const {computerMoveClick();}
+    Q_INVOKABLE void computerSlot() {computerClick();}
+    Q_INVOKABLE void computerMoveSlot() {computerMoveClick();}
     Q_INVOKABLE void transitionCompleteSlot(){transitionComplete();}
     Q_INVOKABLE void moveReadySlot(){moveReady();}
 };
+
 
 #endif // CHESS_H

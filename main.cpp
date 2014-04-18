@@ -24,7 +24,7 @@ using namespace std;
 
 #include "chess.h"
 
-//#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
+#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
 #define __GUI__ // shows using GUI - alternative is console mode
 
 const int MAX_TURNS = 50;
@@ -149,7 +149,6 @@ gameobject::gameobject(){
 
 // copy constructor
 gameobject::gameobject(const gameobject& game){
-    //vector<string>* pboard = new vector<string>;
     for (vector<string>::const_iterator itr = game.cboard.begin(); itr < game.cboard.end(); ++itr)
         cboard.push_back(*itr);
     for (vector<player>::const_iterator itr = game.players.begin(); itr < game.players.end(); ++itr)
@@ -217,7 +216,6 @@ void gameobject::createPositions(){
         players[0].pushBackPos(position(1,i));
         players[1].pushBackPos(position(BOARD_RANKS-2,i));
     }
-
     //others
     for (size_t i = 0; i < BOARD_FILES; i++){
         players[0].pushBackPos(position(0,i));
@@ -243,7 +241,6 @@ void gameobject::placePieces(){
 }
 
 bool gameobject::loadGame(){
-    // get names and positions
     string filename("saved_chess.txt");
     ifstream input;
     input.open(filename);
@@ -340,10 +337,8 @@ string gameobject::createMove(const position& startPos, const position& endPos)c
     stringstream ss;
     char startCol = (char)(int(startPos.col) + (int)'A');
     char endCol = (char)(int(endPos.col) + (int) 'A');
-
     ss << startCol << (BOARD_RANKS - startPos.row) << '-' << endCol << (BOARD_RANKS - endPos.row);
     ss >> sMove;
-
     return sMove;
 }
 
@@ -572,7 +567,7 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
                 if (inCheck(iPlayer, dummyScore, position(), position(), NULL) ) return false;
 
                 // 5. The king does not pass through a square that is attacked by an enemy piece.
-                //    - Oh bloody hell. Modify check_path to call in_check for every square it passes through...
+                //    - Modify check_path to call in_check for every square it passes through...
                 if (!checkPath(startPos, endPos, distance, bDestEmpty, theirPiece, iPlayer, true)) //(true = bCheckCheck)
                     return false;
 
@@ -749,17 +744,19 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     }
 
     printBoard();
+    players[iPlayer].lastMove.endPos = endPos;
+    players[iPlayer].lastMove.startPos = startPos;
+
     return;
 }
 
 bool gameobject::commonScoring(bool bInCheck, size_t hiScore, int ourValue, int theirValue, int kingValue, bool bAI, size_t iPlayer){
     if (checkDirection == THEM_AGAINST_KING){
-        bInCheck = true; // TO DO: check this
+        bInCheck = true;
         hiScore -= 500;
     }
     if (checkDirection == THEM_AGAINST_KING || checkDirection == THEM_AGAINST_PIECE){
         hiScore -= ourValue * (1 + (ourValue >= 9));
-        // TO DO: if this is the only place our_value is used - we should instead just change the value of Q or K at source
     }
     if (checkDirection == THEM_AGAINST_CURRENT)
         hiScore += ourValue * (1 + (ourValue >= 9));
@@ -769,7 +766,7 @@ bool gameobject::commonScoring(bool bInCheck, size_t hiScore, int ourValue, int 
     }
     if (checkDirection == US_AGAINST_PIECE)
         hiScore += theirValue / 1.5;
-    return bAI;
+    return (bAI && !bInCheck);
 }
 
 bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position startPos, position endPos, gameobject* gm){
@@ -800,7 +797,6 @@ bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position st
 
     if (startPos != nullpos){
         // add scores for takeovers
-        //int ourValue = getCaptureValue(cboard[startPos.row][startPos.col]);
         int theirValue = getCaptureValue(cboard[endPos.row][endPos.col]);
 
         hiScore += theirValue * 2; //pieces taken immediately have to be more valuable than those could be taken in the net turn...
@@ -999,7 +995,7 @@ bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position st
             else if (checkDirection == US_AGAINST_PIECE)
                 iPlayer = 1 - iPlayer;
 #ifdef __DEBUG__
-            cout << "checkDirection = " << (int)checkDirection << endl;
+            //cout << "checkDirection = " << (int)checkDirection << endl;
 #endif
         }
         else checkDirection = NO_MORE;
@@ -1017,7 +1013,9 @@ bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position st
         }
     }
     finalHiScore = hiScore;
-    //hiSc = finalHiScore
+#ifdef __DEBUG__
+    cout << "finalHiScore = " << finalHiScore << endl;
+#endif
     if (!bAI)
         return false;
     else
@@ -1179,7 +1177,7 @@ bool gameobject::scoreDirectionsLoop(size_t i, char p, bool bMove, string& sMove
                     bCont = false;
 
                 // 5. The king does not pass through a square that is attacked by an enemy piece.
-                //    - Oh bloody hell. Modify check_path to call in_check for every square it passes through...
+                //    - Modify check_path to call in_check for every square it passes through...
                 if (!checkPath(ourPos, endPos, abs((int)endPos.col - (int)ourPos.col), bDestEmpty, theirPiece, iPlayer, true))
                     bCont = false;
 
@@ -1214,7 +1212,7 @@ string gameobject::createProspectiveMove(size_t& hiScore, size_t moveScore, cons
 }
 
 bool gameobject::isStalemate(){
-    // TO DO:
+    // TO DO
     return false;
 }
 
@@ -1235,10 +1233,10 @@ bool gameobject::inCheckMate(const size_t& iPlayer, const bool bMove){
     vector<int> myIndexes;
 
     for (size_t iv = 0; iv < players[iPlayer].positions.size(); ++iv) myIndexes.push_back(iv);
-        random_shuffle ( myIndexes.begin(), myIndexes.end() );
+    random_shuffle ( myIndexes.begin(), myIndexes.end() );
 
-    // int inds[16] = {8,3,12,13,9,11,2,6,5,7,0,1,15,4,10,14};
-    // vector<int> my_indexes(inds, inds+16);
+    //int inds[16] = {8,3,12,13,9,11,2,6,5,7,0,1,15,4,10,14};
+    //vector<int> myIndexes(inds, inds+16);
     // use the above if we want to test this version against the python version
 
     position opKingPos(position(players[1 - iPlayer].positions[0]));
@@ -1416,7 +1414,7 @@ bool gameobject::inCheckMate(const size_t& iPlayer, const bool bMove){
     }
     if (hiScore > 0 && bMove){
         movePiece(sMove, iPlayer, true); // computer makes a move for us
-        if (bImages) cout << sMove << endl;
+        if (bConsole) cout << sMove << endl;
     }
     return true;
 }
@@ -1439,12 +1437,12 @@ return;
         for (size_t j = 0; j < BOARD_FILES; ++j){
             // do a conversion of the board now:
             char p = cboard[row][j];
-            char cdir = (char) 31; // down (player 1)
+            char cdir = (char) 30; // down (player 1)
             position pos(row,j);
             p = basicType(p);
             for (size_t i = 0; i < players[0].positions.size(); ++i){
                 if (players[0].positions[i] == pos){
-                    cdir = (char) 30; // up (player 2)
+                    cdir = (char) 31; // up (player 2)
                     // convert player 1 to lower case:
                     p = tolower(p);
                     break;
@@ -1485,6 +1483,7 @@ player::player(const player& pl){
 //-----------------------------------------------------------------------------------------
 
 void ChessGUI::initialise(){
+
     //initialise, otherwise errors on loading QML:
     for (int r = 0; r < BOARD_RANKS; ++r){
         for (int c = 0; c < BOARD_FILES; ++c){
@@ -1517,9 +1516,11 @@ void ChessGUI::initialise(){
 
     //initialise stateOrigin
     setStateOrigin('p', position(0,0));
+    bProcessing = false;
 }
 
 void ChessGUI::boardClick(int x, int y){
+    bProcessing = true;
     // 0-indexed from top left
     size_t cl = int(x/BUTTON_WIDTH);
     size_t rw = int(y/BUTTON_WIDTH);
@@ -1550,6 +1551,7 @@ void ChessGUI::boardClick(int x, int y){
                 string strImageOpacity = "opacity" + getBoardRef(pGame->GUImoveStart.col,pGame->GUImoveStart.row);
                 pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
                 displayMove();
+                return;
             }
             else{
                 selectionState = FROM_SELECTED;
@@ -1557,6 +1559,7 @@ void ChessGUI::boardClick(int x, int y){
             }
         }
     }
+    bProcessing = false;
 }
 
 void ChessGUI::executeMove(string cmd){
@@ -1595,13 +1598,13 @@ void ChessGUI::executeMove(string cmd){
         pGame->players[0].bComputer = false;
         pGame->players[1].bComputer = false;
     }
-
     labelText += "\n\n(" + pGame->players[1 - pGame->cPlayer].name + "'s move: " + cmd + ")";
     pView->rootContext()->setContextProperty("statusText", labelText.c_str());
 }
 
 bool ChessGUI::move(){
     if (!pGame->bGameOver){
+        bProcessing = true;
         stringstream ss;
         string xyString;
 
@@ -1648,6 +1651,7 @@ void ChessGUI::displayMove(){
         string strImage = "image" + getBoardRef(pGame->GUImoveStart.col, pGame->GUImoveStart.row);
         pView->rootContext()->setContextProperty(strImage.c_str(), strImageName.c_str());
 
+
         // 3. Set off the transition:
         stringstream ss, ss2;
         string sx, sy;
@@ -1688,6 +1692,8 @@ void ChessGUI::completeMove(){
 
     string strState = "appState";
     pView->rootContext()->setContextProperty(strState.c_str(), "");
+
+    bProcessing = false;
 }
 
 string ChessGUI::getBoardRef(int x, int y) const{
@@ -1773,6 +1779,44 @@ void ChessGUI::showMessage(string msg) const{
 
 // Message handlers
 
+void ChessGUI::humanClick()const{
+    if (pGame->players[1-pGame->cPlayer].bComputer){
+        pGame->players[1-pGame->cPlayer].bComputer = false;
+        string msg = "You now have control of ";
+        msg += pGame->players[1-pGame->cPlayer].name;
+        showMessage(msg);
+    }
+    else{
+        string msg = "You already have control of ";
+        msg += pGame->players[1-pGame->cPlayer].name;
+        showMessage(msg);
+    }
+}
+
+void ChessGUI::computerClick(){
+    if (!pGame->players[pGame->cPlayer].bComputer){
+        pGame->players[pGame->cPlayer].bComputer = true;
+        string msg = "The computer now has control of ";
+        msg += pGame->players[pGame->cPlayer].name;
+        showMessage(msg);
+        bProcessing = true;
+        play();
+    }
+    else{
+        string msg = "The computer already has control of ";
+        msg += pGame->players[pGame->cPlayer].name;
+        showMessage(msg);
+    }
+}
+
+void ChessGUI::computerMoveClick(){
+    if (bProcessing == true){
+        return;
+    }
+    bProcessing = true;
+    play();
+}
+
 void ChessGUI::newClick() const{
     pGame->newGame();
     recreateBoard();
@@ -1801,18 +1845,16 @@ void ChessGUI::loadClick() const{
     }
 }
 
-// Stubs
-
-void ChessGUI::humanClick() const{
-    showMessage("Stub: Player takes control of computer user");
-}
-
-void ChessGUI::computerClick() const{
-    showMessage("Stub: Computer takes control");
-}
-
-void ChessGUI::computerMoveClick() const{
-    showMessage("Stub: Computer plays move for user");
+void ChessGUI::play(){
+    if (pGame->bGameOver == false){
+        pGame->computerTurn(pGame->cPlayer);// finds a move and makes it
+        pGame->GUImoveStart = pGame->players[pGame->cPlayer].lastMove.startPos;
+        pGame->GUImoveEnd = pGame->players[pGame->cPlayer].lastMove.endPos;
+        string cmd = pGame->createMove(pGame->GUImoveStart, pGame->GUImoveEnd);
+        bProcessing = true;
+        executeMove(cmd);
+        displayMove();
+    }
 }
 
 // State notifications
@@ -1820,6 +1862,7 @@ void ChessGUI::computerMoveClick() const{
 void ChessGUI::transitionComplete(){
     completeMove();
 }
+
 
 void ChessGUI::moveReady(){
     //showMessage("Move ready");
@@ -1840,6 +1883,7 @@ string userInput(){
 //-----------------------------------------------------------------------------------------
 //  Main
 //-----------------------------------------------------------------------------------------
+
 
 int main(int argc, char *argv[])
 {
@@ -1929,18 +1973,8 @@ int main(int argc, char *argv[])
             else
                 cout << "\nNo saved game was found.\n\n";
         }
-        //else if (cmd == "all")
-        //    game.printAllVariables();
         else if (cmd == "board")
             game.printBoard();
-        //else if (cmd == "pastmoves")
-        //    game.printPastMoves();
-        //else if (cmd == "stats")
-        //    showStats();
-        //else if (cmd == "pieces")
-        //    printPieces();
-        //else if (cmd == "help")
-        //    game.showHelp();
         else if (cmd == "checkcheck"){ // for debug only
             if (game.inCheck(game.cPlayer, score, position(), position(), NULL ))
                 cout << "\nCHECK\n\n";

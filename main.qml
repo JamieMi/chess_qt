@@ -292,6 +292,7 @@ Rectangle {
         y: 335
         width: 48
         height: 48
+        visible: false
         sourceSize.width: 123
         sourceSize.height: 123
         source: "user_male_olive_green.png"
@@ -303,6 +304,7 @@ Rectangle {
         y: 396
         width: 48
         height: 48
+        visible: false
         sourceSize.height: 123
         sourceSize.width: 123
         source: "user_computer.png"
