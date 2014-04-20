@@ -13,7 +13,7 @@ class position{
 public:
     size_t row;
     size_t col;
-    position(): row(-1),col(-1) {} // TO DO : initialisation list
+    position(): row(-1),col(-1) {}
     position(size_t r, size_t c):row(r),col(c){}
     bool isValid();
 };

@@ -22,9 +22,11 @@
 
 using namespace std;
 
+#include "PromotionDlg.h"
 #include "chess.h"
 
-#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
+
+//#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
 #define __GUI__ // shows using GUI - alternative is console mode
 
 const int MAX_TURNS = 50;
@@ -738,7 +740,13 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
                 cout << "Thank you. The pawn has been promoted." << endl;
             }
             else{
-                // TO DO: a dialogue box offering buttons for different piece types
+                PromotionDlg *dialog = new PromotionDlg();
+                dialog->exec();
+                cboard[endPos.row][endPos.col] = dialog->getPiece();
+                for (size_t i = 0; i < players[iPlayer].pieces.size(); ++i){
+                    if (players[iPlayer].positions[i] == endPos)
+                        players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
+                }
             }
         }
     }
