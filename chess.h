@@ -98,8 +98,11 @@ public:
     char basicType(char p);
     void printBoard();
     bool computerTurn(size_t iPlayer);
+    size_t getTakenIndex() const {return opIndex;}
+    void clearTakenIndex(){opIndex = -1;}
 private:
     pastboards pastBoards;
+    size_t opIndex; // recorded so that the image of a taken piece can be removed after a transition
     void createBoard(){for (size_t i = 0;i < 8; ++i) cboard.push_back("........");}
     // Note: board size not referred to here, as it would complicate the method...
     void resetBoard(){
@@ -136,7 +139,7 @@ public:
     void initialise();
     std::string getBoardRef(int x, int y) const;
     void showMessage(std::string msg) const;
-    void setStateOrigin(char p, position pos);
+    void setPieceImage(char p, position pos, size_t piece/*1-32*/, bool bTransition) const;
 private:
     void boardClick(int x, int y);
     void newClick() const;
@@ -156,6 +159,7 @@ private:
     void play();
     void executeMove(std::string cmd);
     void displayMove();
+    void setOpacity(size_t iPiece, std::string opacity) const;
 signals:
     void signalMoveReady();
 

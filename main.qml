@@ -184,81 +184,48 @@ Rectangle {
                  }
              }
 
-             Image {id: stateOrigin; z: zStateOrigin; x: xStateOrigin; y: yStateOrigin; width: 50; height: 50; opacity: 1; source: imageStateOrigin}
+             Image {id: pieceTransition; z: zTransition; x: xTransition; y: yTransition; width: 50; height: 50; opacity: opacityTransition; source: imageTransition}
 
-             // TO DO: now we have stateOrigin, we can remove x,y,z properties below?
-             Image {id: imager8f1; z: zR8F1; x: 50; y: 50; width: 50; height: 50; opacity: opacityR8F1; source: imageR8F1}
-             Image {id: imager8f2; z: zR8F2; x: 100; y: 50; width: 50; height: 50; opacity: opacityR8F2; source: imageR8F2}
-             Image {id: imager8f3; z: zR8F3; x: 150; y: 50; width: 50; height: 50; opacity: opacityR8F3; source: imageR8F3}
-             Image {id: imager8f4; z: zR8F4; x: 200; y: 50; width: 50; height: 50; opacity: opacityR8F4; source: imageR8F4}
-             Image {id: imager8f5; z: zR8F5; x: 250; y: 50; width: 50; height: 50; opacity: opacityR8F5; source: imageR8F5}
-             Image {id: imager8f6; z: zR8F6; x: 300; y: 50; width: 50; height: 50; opacity: opacityR8F6; source: imageR8F6}
-             Image {id: imager8f7; z: zR8F7; x: 350; y: 50; width: 50; height: 50; opacity: opacityR8F7; source: imageR8F7}
-             Image {id: imager8f8; z: zR8F8; x: 400; y: 50; width: 50; height: 50; opacity: opacityR8F8; source: imageR8F8}
-             Image {id: imager7f1; z: zR7F1; x: 50; y: 100; width: 50; height: 50; opacity: opacityR7F1; source: imageR7F1}
-             Image {id: imager7f2; z: zR7F2; x: 100; y: 100; width: 50; height: 50; opacity: opacityR7F2; source: imageR7F2}
-             Image {id: imager7f3; z: zR7F3; x: 150; y: 100; width: 50; height: 50; opacity: opacityR7F3; source: imageR7F3}
-             Image {id: imager7f4; z: zR7F4; x: 200; y: 100; width: 50; height: 50; opacity: opacityR7F4; source: imageR7F4}
-             Image {id: imager7f5; z: zR7F5; x: 250; y: 100; width: 50; height: 50; opacity: opacityR7F5; source: imageR7F5}
-             Image {id: imager7f6; z: zR7F6; x: 300; y: 100; width: 50; height: 50; opacity: opacityR7F6; source: imageR7F6}
-             Image {id: imager7f7; z: zR7F7; x: 350; y: 100; width: 50; height: 50; opacity: opacityR7F7; source: imageR7F7}
-             Image {id: imager7f8; z: zR7F8; x: 400; y: 100; width: 50; height: 50; opacity: opacityR7F8; source: imageR7F8}
-             Image {id: imager6f1; z: zR6F1; x: 50; y: 150; width: 50; height: 50; opacity: opacityR6F1; source: imageR6F1}
-             Image {id: imager6f2; z: zR6F2; x: 100; y: 150; width: 50; height: 50; opacity: opacityR6F2; source: imageR6F2}
-             Image {id: imager6f3; z: zR6F3; x: 150; y: 150; width: 50; height: 50; opacity: opacityR6F3; source: imageR6F3}
-             Image {id: imager6f4; z: zR6F4; x: 200; y: 150; width: 50; height: 50; opacity: opacityR6F4; source: imageR6F4}
-             Image {id: imager6f5; z: zR6F5; x: 250; y: 150; width: 50; height: 50; opacity: opacityR6F5; source: imageR6F5}
-             Image {id: imager6f6; z: zR6F6; x: 300; y: 150; width: 50; height: 50; opacity: opacityR6F6; source: imageR6F6}
-             Image {id: imager6f7; z: zR6F7; x: 350; y: 150; width: 50; height: 50; opacity: opacityR6F7; source: imageR6F7}
-             Image {id: imager6f8; z: zR6F8; x: 400; y: 150; width: 50; height: 50; opacity: opacityR6F8; source: imageR6F8}
-             Image {id: imager5f1; z: zR5F1; x: 50; y: 200; width: 50; height: 50; opacity: opacityR5F1; source: imageR5F1}
-             Image {id: imager5f2; z: zR5F2; x: 100; y: 200; width: 50; height: 50; opacity: opacityR5F2; source: imageR5F2}
-             Image {id: imager5f3; z: zR5F3; x: 150; y: 200; width: 50; height: 50; opacity: opacityR5F3; source: imageR5F3}
-             Image {id: imager5f4; z: zR5F4; x: 200; y: 200; width: 50; height: 50; opacity: opacityR5F4; source: imageR5F4}
-             Image {id: imager5f5; z: zR5F5; x: 250; y: 200; width: 50; height: 50; opacity: opacityR5F5; source: imageR5F5}
-             Image {id: imager5f6; z: zR5F6; x: 300; y: 200; width: 50; height: 50; opacity: opacityR5F6; source: imageR5F6}
-             Image {id: imager5f7; z: zR5F7; x: 350; y: 200; width: 50; height: 50; opacity: opacityR5F7; source: imageR5F7}
-             Image {id: imager5f8; z: zR5F8; x: 400; y: 200; width: 50; height: 50; opacity: opacityR5F8; source: imageR5F8}
-             Image {id: imager4f1; z: zR4F1; x: 50; y: 250; width: 50; height: 50; opacity: opacityR4F1; source: imageR4F1}
-             Image {id: imager4f2; z: zR4F2; x: 100; y: 250; width: 50; height: 50; opacity: opacityR4F2; source: imageR4F2}
-             Image {id: imager4f3; z: zR4F3; x: 150; y: 250; width: 50; height: 50; opacity: opacityR4F3; source: imageR4F3}
-             Image {id: imager4f4; z: zR4F4; x: 200; y: 250; width: 50; height: 50; opacity: opacityR4F4; source: imageR4F4}
-             Image {id: imager4f5; z: zR4F5; x: 250; y: 250; width: 50; height: 50; opacity: opacityR4F5; source: imageR4F5}
-             Image {id: imager4f6; z: zR4F6; x: 300; y: 250; width: 50; height: 50; opacity: opacityR4F6; source: imageR4F6}
-             Image {id: imager4f7; z: zR4F7; x: 350; y: 250; width: 50; height: 50; opacity: opacityR4F7; source: imageR4F7}
-             Image {id: imager4f8; z: zR4F8; x: 400; y: 250; width: 50; height: 50; opacity: opacityR4F8; source: imageR4F8}
-             Image {id: imager3f1; z: zR3F1; x: 50; y: 300; width: 50; height: 50; opacity: opacityR3F1; source: imageR3F1}
-             Image {id: imager3f2; z: zR3F2; x: 100; y: 300; width: 50; height: 50; opacity: opacityR3F2; source: imageR3F2}
-             Image {id: imager3f3; z: zR3F3; x: 150; y: 300; width: 50; height: 50; opacity: opacityR3F3; source: imageR3F3}
-             Image {id: imager3f4; z: zR3F4; x: 200; y: 300; width: 50; height: 50; opacity: opacityR3F4; source: imageR3F4}
-             Image {id: imager3f5; z: zR3F5; x: 250; y: 300; width: 50; height: 50; opacity: opacityR3F5; source: imageR3F5}
-             Image {id: imager3f6; z: zR3F6; x: 300; y: 300; width: 50; height: 50; opacity: opacityR3F6; source: imageR3F6}
-             Image {id: imager3f7; z: zR3F7; x: 350; y: 300; width: 50; height: 50; opacity: opacityR3F7; source: imageR3F7}
-             Image {id: imager3f8; z: zR3F8; x: 400; y: 300; width: 50; height: 50; opacity: opacityR3F8; source: imageR3F8}
-             Image {id: imager2f1; z: zR2F1; x: 50; y: 350; width: 50; height: 50; opacity: opacityR2F1; source: imageR2F1}
-             Image {id: imager2f2; z: zR2F2; x: 100; y: 350; width: 50; height: 50; opacity: opacityR2F2; source: imageR2F2}
-             Image {id: imager2f3; z: zR2F3; x: 150; y: 350; width: 50; height: 50; opacity: opacityR2F3; source: imageR2F3}
-             Image {id: imager2f4; z: zR2F4; x: 200; y: 350; width: 50; height: 50; opacity: opacityR2F4; source: imageR2F4}
-             Image {id: imager2f5; z: zR2F5; x: 250; y: 350; width: 50; height: 50; opacity: opacityR2F5; source: imageR2F5}
-             Image {id: imager2f6; z: zR2F6; x: 300; y: 350; width: 50; height: 50; opacity: opacityR2F6; source: imageR2F6}
-             Image {id: imager2f7; z: zR2F7; x: 350; y: 350; width: 50; height: 50; opacity: opacityR2F7; source: imageR2F7}
-             Image {id: imager2f8; z: zR2F8; x: 400; y: 350; width: 50; height: 50; opacity: opacityR2F8; source: imageR2F8}
-             Image {id: imager1f1; z: zR1F1; x: 50; y: 400; width: 50; height: 50; opacity: opacityR1F1; source: imageR1F1}
-             Image {id: imager1f2; z: zR1F2; x: 100; y: 400; width: 50; height: 50; opacity: opacityR1F2; source: imageR1F2}
-             Image {id: imager1f3; z: zR1F3; x: 150; y: 400; width: 50; height: 50; opacity: opacityR1F3; source: imageR1F3}
-             Image {id: imager1f4; z: zR1F4; x: 200; y: 400; width: 50; height: 50; opacity: opacityR1F4; source: imageR1F4}
-             Image {id: imager1f5; z: zR1F5; x: 250; y: 400; width: 50; height: 50; opacity: opacityR1F5; source: imageR1F5}
-             Image {id: imager1f6; z: zR1F6; x: 300; y: 400; width: 50; height: 50; opacity: opacityR1F6; source: imageR1F6}
-             Image {id: imager1f7; z: zR1F7; x: 350; y: 400; width: 50; height: 50; opacity: opacityR1F7; source: imageR1F7}
-             Image {id: imager1f8; z: zR1F8; x: 400; y: 400; width: 50; height: 50; opacity: opacityR1F8; source: imageR1F8}
+             Image {id: piece1; z: zPiece1; x: xPiece1; y: yPiece1; width: 50; height: 50; opacity: opacity1; source: imagePiece1}
+             Image {id: piece2; z: zPiece2; x: xPiece2; y: yPiece2; width: 50; height: 50; opacity: opacity2; source: imagePiece2}
+             Image {id: piece3; z: zPiece3; x: xPiece3; y: yPiece3; width: 50; height: 50; opacity: opacity3; source: imagePiece3}
+             Image {id: piece4; z: zPiece4; x: xPiece4; y: yPiece4; width: 50; height: 50; opacity: opacity4; source: imagePiece4}
+             Image {id: piece5; z: zPiece5; x: xPiece5; y: yPiece5; width: 50; height: 50; opacity: opacity5; source: imagePiece5}
+             Image {id: piece6; z: zPiece6; x: xPiece6; y: yPiece6; width: 50; height: 50; opacity: opacity6; source: imagePiece6}
+             Image {id: piece7; z: zPiece7; x: xPiece7; y: yPiece7; width: 50; height: 50; opacity: opacity7; source: imagePiece7}
+             Image {id: piece8; z: zPiece8; x: xPiece8; y: yPiece8; width: 50; height: 50; opacity: opacity8; source: imagePiece8}
+             Image {id: piece9; z: zPiece9; x: xPiece9; y: yPiece9; width: 50; height: 50; opacity: opacity9; source: imagePiece9}
+             Image {id: piece10; z: zPiece10; x: xPiece10; y: yPiece10; width: 50; height: 50; opacity: opacity10; source: imagePiece10}
+             Image {id: piece11; z: zPiece11; x: xPiece11; y: yPiece11; width: 50; height: 50; opacity: opacity11; source: imagePiece11}
+             Image {id: piece12; z: zPiece12; x: xPiece12; y: yPiece12; width: 50; height: 50; opacity: opacity12; source: imagePiece12}
+             Image {id: piece13; z: zPiece13; x: xPiece13; y: yPiece13; width: 50; height: 50; opacity: opacity13; source: imagePiece13}
+             Image {id: piece14; z: zPiece14; x: xPiece14; y: yPiece14; width: 50; height: 50; opacity: opacity14; source: imagePiece14}
+             Image {id: piece15; z: zPiece15; x: xPiece15; y: yPiece15; width: 50; height: 50; opacity: opacity15; source: imagePiece15}
+             Image {id: piece16; z: zPiece16; x: xPiece16; y: yPiece16; width: 50; height: 50; opacity: opacity16; source: imagePiece16}
+             Image {id: piece17; z: zPiece17; x: xPiece17; y: yPiece17; width: 50; height: 50; opacity: opacity17; source: imagePiece17}
+             Image {id: piece18; z: zPiece18; x: xPiece18; y: yPiece18; width: 50; height: 50; opacity: opacity18; source: imagePiece18}
+             Image {id: piece19; z: zPiece19; x: xPiece19; y: yPiece19; width: 50; height: 50; opacity: opacity19; source: imagePiece19}
+             Image {id: piece20; z: zPiece20; x: xPiece20; y: yPiece20; width: 50; height: 50; opacity: opacity20; source: imagePiece20}
+             Image {id: piece21; z: zPiece21; x: xPiece21; y: yPiece21; width: 50; height: 50; opacity: opacity21; source: imagePiece21}
+             Image {id: piece22; z: zPiece22; x: xPiece22; y: yPiece22; width: 50; height: 50; opacity: opacity22; source: imagePiece22}
+             Image {id: piece23; z: zPiece23; x: xPiece23; y: yPiece23; width: 50; height: 50; opacity: opacity23; source: imagePiece23}
+             Image {id: piece24; z: zPiece24; x: xPiece24; y: yPiece24; width: 50; height: 50; opacity: opacity24; source: imagePiece24}
+             Image {id: piece25; z: zPiece25; x: xPiece25; y: yPiece25; width: 50; height: 50; opacity: opacity25; source: imagePiece25}
+             Image {id: piece26; z: zPiece26; x: xPiece26; y: yPiece26; width: 50; height: 50; opacity: opacity26; source: imagePiece26}
+             Image {id: piece27; z: zPiece27; x: xPiece27; y: yPiece27; width: 50; height: 50; opacity: opacity27; source: imagePiece27}
+             Image {id: piece28; z: zPiece28; x: xPiece28; y: yPiece28; width: 50; height: 50; opacity: opacity28; source: imagePiece28}
+             Image {id: piece29; z: zPiece29; x: xPiece29; y: yPiece29; width: 50; height: 50; opacity: opacity29; source: imagePiece29}
+             Image {id: piece30; z: zPiece30; x: xPiece30; y: yPiece30; width: 50; height: 50; opacity: opacity30; source: imagePiece30}
+             Image {id: piece31; z: zPiece31; x: xPiece31; y: yPiece31; width: 50; height: 50; opacity: opacity31; source: imagePiece31}
+             Image {id: piece32; z: zPiece32; x: xPiece32; y: yPiece32; width: 50; height: 50; opacity: opacity32; source: imagePiece32}
 
-             Rectangle {
-                 id: rectangle1
+             Image {
+                 id: boardImage
                  x: 50
                  y: 50
                  width: 400
                  height: 400
-                 color: "#ff0000"
+                 source: "board.gif"
                  z: -1
              }
          }
@@ -402,7 +369,7 @@ Rectangle {
          State {
              name: "EndMoveState"
              PropertyChanges {
-                 target: stateOrigin
+                 target: pieceTransition//stateOrigin
                  x: transitionTargetX
                  y: transitionTargetY
              }

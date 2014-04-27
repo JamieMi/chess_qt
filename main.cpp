@@ -608,6 +608,7 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     for (size_t i = 0; i < players[1-iPlayer].positions.size(); ++i){
         if (players[1-iPlayer].positions[i] == endPos){
             position pos(-1,-1);// i.e. invalidate it
+            opIndex = i; // because some time after the move, need to remove image of the taken piece
             players[1-iPlayer].positions[i] = pos;
             break;
         }
@@ -1491,39 +1492,15 @@ player::player(const player& pl){
 //-----------------------------------------------------------------------------------------
 
 void ChessGUI::initialise(){
-
     //initialise, otherwise errors on loading QML:
-    for (int r = 0; r < BOARD_RANKS; ++r){
-        for (int c = 0; c < BOARD_FILES; ++c){
-            // TO DO: could probably adapt setStateOrigin() to handle all this now
-            string ref = getBoardRef(c, r);
-            string strImageName = "image" + ref;
-            string strImageOpacity = "opacity" + ref;
-            stringstream ss, ss2;
-            string sx, sy;
-            ss << ((c+1) * 50);
-            ss >> sx;
-            ss2 << ((r+1) * 50);
-            ss2 >> sy;
-            string strImageX = "x" + ref;
-            string strImageY = "y" + ref;
-            string strImageZ = "z" + ref;
-            if (bImages)
-            {
-                pView->rootContext()->setContextProperty(strImageName.c_str(), "");
-                pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
-                pView->rootContext()->setContextProperty(strImageX.c_str(), sx.c_str());
-                pView->rootContext()->setContextProperty(strImageY.c_str(), sy.c_str());
-                pView->rootContext()->setContextProperty(strImageZ.c_str(), "1");
-            }
-        }
-    }
-
+    displayBoardImages();
     pView->rootContext()->setContextProperty("appState", "");
     pView->rootContext()->setContextProperty("statusText", pGame->gameDetails().c_str());
-
-    //initialise stateOrigin
-    setStateOrigin('p', position(0,0));
+    pView->rootContext()->setContextProperty("xTransition", "50");
+    pView->rootContext()->setContextProperty("yTransition", "50");
+    pView->rootContext()->setContextProperty("zTransition", "-2");
+    pView->rootContext()->setContextProperty("opacityTransition", "1");
+    pView->rootContext()->setContextProperty("imageTransition", "pawn.ico");
     bProcessing = false;
 }
 
@@ -1540,24 +1517,38 @@ void ChessGUI::boardClick(int x, int y){
     else if (selectionState == NO_SELECTION){
         selectionState = FROM_SELECTED;
         pGame->GUImoveStart = position(rw, cl);
-        string strImageOpacity = "opacity" + getBoardRef(cl,rw);
-        pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "0.6");
+        size_t i;
+        for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+            if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
+        i = i + (pGame->cPlayer*16) + 1;
+        setOpacity(i, "0.3");
     }
     else if (selectionState == FROM_SELECTED){
         if (pGame->GUImoveStart.row == rw && pGame->GUImoveStart.col == cl){
             // deselect the move
+
+            size_t i;
+            for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+                if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
+            i = i + (pGame->cPlayer*16) + 1;
+            setOpacity(i, "1");
+
             pGame->GUImoveStart.row = -1;
             pGame->GUImoveStart.col = -1;
             selectionState = NO_SELECTION;
-            string strImageOpacity = "opacity" + getBoardRef(cl,rw);
-            pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
+
+            //string strImageOpacity = "opacity" + getBoardRef(cl,rw);
+            //pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
         }
         else{
             selectionState = TO_SELECTED;
             pGame->GUImoveEnd = position(rw, cl);
-            if (move()){
-                string strImageOpacity = "opacity" + getBoardRef(pGame->GUImoveStart.col,pGame->GUImoveStart.row);
-                pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
+            if (move()){                
+                size_t i;
+                for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+                    if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
+                i = i + (pGame->cPlayer*16) + 1;
+                setOpacity(i, "1");
                 displayMove();
                 return;
             }
@@ -1627,38 +1618,79 @@ bool ChessGUI::move(){
     //invalid move
 }
 
-void ChessGUI::setStateOrigin(char p, position pos){
-    // initialise stateOrigin
+void ChessGUI::setOpacity(size_t iPiece, string opacityVal) const{
     if (bImages){
-        string ref = getBoardRef(pos.col, pos.row);
+        string opacityStr = "opacity";
+        string colorStr = "color";
+        char cp[4];
+        itoa(iPiece, cp, 10);
+        opacityStr += cp;
+        colorStr += cp;
+        string colorVal = "";
+
+        pView->rootContext()->setContextProperty(opacityStr.c_str(), opacityVal.c_str());
+    }
+}
+
+void ChessGUI::setPieceImage(char p, position pos, size_t iPiece, bool bTransition) const{
+    // initialise transition piece
+    if (bImages){
         stringstream ss, ss2;
         string sx, sy;
         ss << ((pos.col + 1) * 50);
         ss >> sx;
         ss2 << ((pos.row + 1) * 50);
         ss2 >> sy;
-        if (pGame->cPlayer == 1) // just switched to player 2 in executeMove
+        if (bTransition && pGame->cPlayer == 1)// just switched to player 2 in executeMove
             p = tolower(p); // To signal this is black, as setSquareImage has no context
         string strImage = setSquareImage(p, pos.row, pos.col);
-        pView->rootContext()->setContextProperty("imageStateOrigin", strImage.c_str());
-        pView->rootContext()->setContextProperty("xStateOrigin", sx.c_str());
-        pView->rootContext()->setContextProperty("yStateOrigin", sy.c_str());
-        pView->rootContext()->setContextProperty("zStateOrigin", "2");
+
+        if (bTransition){
+            pView->rootContext()->setContextProperty("imageTransition", strImage.c_str());
+            pView->rootContext()->setContextProperty("xTransition", sx.c_str());
+            pView->rootContext()->setContextProperty("yTransition", sy.c_str());
+            pView->rootContext()->setContextProperty("zTransition", "2");
+        }
+        else{
+            string imagePieceStr = "imagePiece";
+            char cp[4];
+            itoa(iPiece, cp, 10);
+            imagePieceStr += cp;
+            string sxID = "xPiece";
+            string syID = "yPiece";
+            string szID = "zPiece";
+            sxID += cp;
+            syID += cp;
+            szID += cp;
+            pView->rootContext()->setContextProperty(imagePieceStr.c_str(), strImage.c_str());
+            pView->rootContext()->setContextProperty(sxID.c_str(), sx.c_str());
+            pView->rootContext()->setContextProperty(syID.c_str(), sy.c_str());
+            if (pos.isValid())
+                pView->rootContext()->setContextProperty(szID.c_str(), "0");
+            else{
+                pView->rootContext()->setContextProperty(szID.c_str(), "-5");
+                pView->rootContext()->setContextProperty(sxID.c_str(), "50");
+                pView->rootContext()->setContextProperty(syID.c_str(), "50");
+            }
+        }
     }
 }
 
 void ChessGUI::displayMove(){
     if (bImages){
-        // 1. for stateOrigin
+        // 1. for Transition
         char p = pGame->cboard[pGame->GUImoveEnd.row][pGame->GUImoveEnd.col];// because we have already moved the background data
-        setStateOrigin(p, pGame->GUImoveStart);
+        setPieceImage(p, pGame->GUImoveStart,0, true);
 
         // 2. This does the normal move, before the transition (i.e. create a space)
-        p = pGame->cboard[pGame->GUImoveStart.row][pGame->GUImoveStart.col];
-        string strImageName = setSquareImage(p, pGame->GUImoveStart.row, pGame->GUImoveStart.col);
-        string strImage = "image" + getBoardRef(pGame->GUImoveStart.col, pGame->GUImoveStart.row);
-        pView->rootContext()->setContextProperty(strImage.c_str(), strImageName.c_str());
-
+        size_t i;
+        for (i = 0; i < pGame->players[1-pGame->cPlayer].positions.size(); ++i)
+            if (pGame->players[1-pGame->cPlayer].positions[i] == pGame->GUImoveEnd) break;
+        string zPieceStr = "zPiece";
+        char cp[4];
+        itoa(i + (1-pGame->cPlayer)*16 + 1, cp, 10);
+        zPieceStr += cp;
+        pView->rootContext()->setContextProperty(zPieceStr.c_str(), "-1");
 
         // 3. Set off the transition:
         stringstream ss, ss2;
@@ -1667,14 +1699,14 @@ void ChessGUI::displayMove(){
         ss >> sx;
         ss2 << ((pGame->GUImoveEnd.row + 1) * 50);
         ss2 >> sy;
-        string strX = "transitionTargetX";
-        pView->rootContext()->setContextProperty(strX.c_str(), sx.c_str());
-        string strY = "transitionTargetY";
-        pView->rootContext()->setContextProperty(strY.c_str(), sy.c_str());
+        pView->rootContext()->setContextProperty("transitionTargetX", sx.c_str());
+        pView->rootContext()->setContextProperty("transitionTargetY", sy.c_str());
+        pView->rootContext()->setContextProperty("zTransition", "1");
+        pView->rootContext()->setContextProperty("opacityTransition", "1");
         string strState = "appState";
         pView->rootContext()->setContextProperty(strState.c_str(), "EndMoveState");
 
-        // 4. Next we restore the z order of the moved image, and replace the destination image.
+        // 4. Next we restore the z order of the moved image, and remove the destination image.
         // But we need to wait for a notification the transition is complete before we do this.
         // This is handled in completeMove().
     }
@@ -1682,14 +1714,22 @@ void ChessGUI::displayMove(){
 
 void ChessGUI::completeMove(){
     // triggered by the completion of the transition effect.
-    pView->rootContext()->setContextProperty("zStateOrigin", "-1");
-
+    pView->rootContext()->setContextProperty("zTransition", "-1");
     char p = pGame->cboard[pGame->GUImoveEnd.row][pGame->GUImoveEnd.col];
     string strImageName = setSquareImage(p, pGame->GUImoveEnd.row, pGame->GUImoveEnd.col);
 
     if (bImages){
-        string strImage = "image" + getBoardRef(pGame->GUImoveEnd.col, pGame->GUImoveEnd.row);
-        pView->rootContext()->setContextProperty(strImage.c_str(), strImageName.c_str());
+        size_t i;
+        for (i = 0; i < pGame->players[1-pGame->cPlayer].positions.size(); ++i)
+            if (pGame->players[1-pGame->cPlayer].positions[i] == pGame->GUImoveEnd) break;
+        // any opposing piece?
+        setOpacity(i + (1-pGame->cPlayer)*16 + 1 , "1");
+        setPieceImage(pGame->players[1-pGame->cPlayer].pieces[i], pGame->GUImoveEnd, i + (1-pGame->cPlayer)*16 + 1, false );
+        if (pGame->getTakenIndex() < 16){
+            setPieceImage(pGame->players[pGame->cPlayer].pieces[pGame->getTakenIndex()], position(), pGame->getTakenIndex() + (pGame->cPlayer)*16 + 1, false );
+            pView->rootContext()->setContextProperty("zTransition", "-2");
+            pGame->clearTakenIndex();
+        }
     }
 
     selectionState = NO_SELECTION;
@@ -1739,21 +1779,23 @@ string ChessGUI::setSquareImage(char& p, int row, int col) const{
     }
     if (btp != '.'){
         alt_txt = btp;
-        if (btp == 'p' && bImages) strImage += "pawnd";
-        else if (btp == 'P' && bImages) strImage += "pawn";
-        else if (btp == 'b' && bImages) strImage += "bishopd";
-        else if (btp == 'B' && bImages) strImage += "bishop";
-        else if (btp == 'r' && bImages) strImage += "rookd";
-        else if (btp == 'R' && bImages) strImage += "rook";
-        else if (btp == 'n' && bImages) strImage += "knightd";
-        else if (btp == 'N' && bImages) strImage += "knight";
-        else if (btp == 'k' && bImages) strImage += "kingd";
-        else if (btp == 'K' && bImages) strImage += "king";
-        else if (btp == 'q' && bImages) strImage += "queend";
-        else if (btp == 'Q' && bImages) strImage += "queen";
+        if (btp == 'p' && bImages) strImage = "pawnd";
+        else if (btp == 'P' && bImages) strImage = "pawn";
+        else if (btp == 'b' && bImages) strImage = "bishopd";
+        else if (btp == 'B' && bImages) strImage = "bishop";
+        else if (btp == 'r' && bImages) strImage = "rookd";
+        else if (btp == 'R' && bImages) strImage = "rook";
+        else if (btp == 'n' && bImages) strImage = "knightd";
+        else if (btp == 'N' && bImages) strImage = "knight";
+        else if (btp == 'k' && bImages) strImage = "kingd";
+        else if (btp == 'K' && bImages) strImage = "king";
+        else if (btp == 'q' && bImages) strImage = "queend";
+        else if (btp == 'Q' && bImages) strImage = "queen";
     }
-    if (strImage == "light" || strImage == "dark") strImage += "square";
-    strImage += ".gif";
+    if (strImage == "light" || strImage == "dark")
+        strImage += "square.gif";
+    else
+        strImage += ".ico";
     p = alt_txt;
     return strImage;
 }
@@ -1761,12 +1803,12 @@ string ChessGUI::setSquareImage(char& p, int row, int col) const{
 void ChessGUI::displayBoardImages() const{
     //create a list of buttons
     if (bImages){
-        for (int r = 1; r < (BOARD_RANKS + 1); ++r){
-            for (int c = 1; c < (BOARD_FILES + 1); ++c){
-                char p = pGame->cboard[r-1][c-1];
-                string strImage = setSquareImage(p, r-1, c-1);
-                string strImageName = "image" + getBoardRef(c-1, r-1);
-                pView->rootContext()->setContextProperty( strImageName.c_str(), strImage.c_str());
+        for (size_t player = 0; player < 2; ++player){
+            for (size_t piece = 0; piece < pGame->players[player].pieces.length(); ++piece ){
+                char cp = pGame->players[player].pieces[piece];
+                if (!pGame->players[player].positions[piece].isValid()) cp = ' ';
+                setPieceImage(cp, pGame->players[player].positions[piece], piece + (player*16) + 1, false );
+                setOpacity(piece + (player*16) + 1 , "1");
             }
         }
     }
@@ -1871,7 +1913,6 @@ void ChessGUI::transitionComplete(){
     completeMove();
 }
 
-
 void ChessGUI::moveReady(){
     //showMessage("Move ready");
 }
@@ -1940,7 +1981,6 @@ int main(int argc, char *argv[])
     QObject::connect(item, SIGNAL(signalMoveReady()),
                         &chessGUI, SLOT(moveReadySlot()));
 
-    chessGUI.displayBoardImages();
     return app.exec();
 #endif
     // console mode goes here...
