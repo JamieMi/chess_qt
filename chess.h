@@ -132,9 +132,12 @@ private:
 class ChessGUI : public QObject
 {
     Q_OBJECT
+private:
+    bool readFile(const QString &fileName);
+    position offset; // used for drag and drop, for the position in a square by which the user is dragging it.
 public:
     bool bProcessing;
-    ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV){pGame = pg; pView = pV;}
+    ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV);
     void displayBoardImages() const;
     void initialise();
     std::string getBoardRef(int x, int y) const;
@@ -142,6 +145,8 @@ public:
     void setPieceImage(char p, position pos, size_t piece/*1-32*/, bool bTransition) const;
 private:
     void boardClick(int x, int y);
+    void boardPress(int x, int y); // drag and drop
+    void boardPositionChange(int x, int y); // drag and drop
     void newClick() const;
     void saveClick() const;
     void loadClick() const;
@@ -165,6 +170,8 @@ signals:
 
 public:
     Q_INVOKABLE void boardClickSlot(int x, int y) {boardClick(x,y);}
+    Q_INVOKABLE void boardPressSlot(int x, int y) {boardPress(x,y);} // drag and drop
+    Q_INVOKABLE void boardPositionChangeSlot(int x, int y) {boardPositionChange(x,y);} // drag and drop
     Q_INVOKABLE void newSlot() const {newClick();}
     Q_INVOKABLE void saveSlot() const {saveClick();}
     Q_INVOKABLE void loadSlot() const {loadClick();}
@@ -174,6 +181,5 @@ public:
     Q_INVOKABLE void transitionCompleteSlot(){transitionComplete();}
     Q_INVOKABLE void moveReadySlot(){moveReady();}
 };
-
 
 #endif // CHESS_H

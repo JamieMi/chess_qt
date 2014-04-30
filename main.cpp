@@ -193,6 +193,7 @@ void player::setPieces(){
 void gameobject::newGame(){
     turn = 1;
     cPlayer = 1;
+    clearTakenIndex();
     players[0].setPieces();
     players[1].setPieces();
     for (size_t i = 0; i < 16; ++i){
@@ -391,7 +392,6 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
         if (bConsole) cout << "\nThat move is not allowed.\n" << endl;
         return false;
     }
-
     position startPos, endPos;
     getMoveCoords(cmd, startPos, endPos);
 
@@ -466,7 +466,7 @@ bool gameobject::validateMove(string cmd, size_t iPlayer){
             // could be valid
             if( (abs((int)endPos.col - (int)startPos.col) == 1 && destination != '.') ||
                 (abs((int)endPos.col - (int)startPos.col) == 1 && destination == '.' && cboard[endPos.row + (iPlayer*2 -1)][endPos.col] == 'E')  ){
-                //diagonal move, either to take a piece directly or to take a pawn on passant
+                // diagonal move, either to take a piece directly or to take a pawn on passant
                 // move the right piece in the positions list, if it's one of theirs
                 for (size_t i = 0; i < players[1-iPlayer].positions.size(); ++i){
                     if (players[1-iPlayer].positions[i] == endPos){
@@ -616,7 +616,6 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
 
     // move the piece on the board:
     char piece = cboard[startPos.row][startPos.col];
-    // char origDest = cboard[endPos.row][endPos.col];
     cboard[startPos.row][startPos.col] = '.';
     assert (basicType(cboard[endPos.row][endPos.col]) != 'K'); // we should never have reached this point
     cboard[endPos.row][endPos.col] = piece;
@@ -698,12 +697,10 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
         // Promotion
         if (bAI){
             cboard[endPos.row][endPos.col] = 'Q';
-
             for (size_t i = 0; i < players[iPlayer].pieces.size(); ++i){
                 if (players[iPlayer].positions[i] == endPos)
                     players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
             }
-
             if (bConsole) cout << "The pawn has been promoted." << endl;
         }
         else
@@ -745,8 +742,9 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
                 dialog->exec();
                 cboard[endPos.row][endPos.col] = dialog->getPiece();
                 for (size_t i = 0; i < players[iPlayer].pieces.size(); ++i){
-                    if (players[iPlayer].positions[i] == endPos)
+                    if (players[iPlayer].positions[i] == endPos){
                         players[iPlayer].pieces[i] = cboard[endPos.row][endPos.col];
+                    }
                 }
             }
         }
@@ -755,7 +753,6 @@ void gameobject::movePiece(string cmd, size_t iPlayer, bool bAI){
     printBoard();
     players[iPlayer].lastMove.endPos = endPos;
     players[iPlayer].lastMove.startPos = startPos;
-
     return;
 }
 
@@ -1491,6 +1488,11 @@ player::player(const player& pl){
 //  GUI
 //-----------------------------------------------------------------------------------------
 
+ChessGUI::ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV){
+    pGame = pg;
+    pView = pV;
+}
+
 void ChessGUI::initialise(){
     //initialise, otherwise errors on loading QML:
     displayBoardImages();
@@ -1504,60 +1506,105 @@ void ChessGUI::initialise(){
     bProcessing = false;
 }
 
-void ChessGUI::boardClick(int x, int y){
+
+void ChessGUI::boardPositionChange(int x, int y){
+    if (pGame->GUImoveStart.isValid()){
+        y = y + 50 - offset.row;
+        x = x + 50 - offset.col;
+        stringstream ss, ss2;
+        string sx, sy;
+        ss << x;
+        ss >> sx;
+        ss2 << y;
+        ss2 >> sy;
+        string imagePieceStr = "imagePiece";
+        size_t iPiece;
+        size_t i;
+        for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+            if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
+        if (i == 16)
+            return; // not one of our pieces to move
+        iPiece = i + (pGame->cPlayer*16) + 1;
+
+        char cp[4];
+        itoa(iPiece, cp, 10);
+        imagePieceStr += cp;
+        string sxID = "xPiece";
+        string syID = "yPiece";
+        string szID = "zPiece";
+        sxID += cp;
+        syID += cp;
+        szID += cp;
+
+        setPieceImage(pGame->players[pGame->cPlayer].pieces[i], pGame->GUImoveStart, iPiece, false );
+        pView->rootContext()->setContextProperty(sxID.c_str(), sx.c_str());
+        pView->rootContext()->setContextProperty(syID.c_str(), sy.c_str());
+    }
+}
+
+void ChessGUI::boardPress(int x, int y){
     bProcessing = true;
     // 0-indexed from top left
     size_t cl = int(x/BUTTON_WIDTH);
     size_t rw = int(y/BUTTON_WIDTH);
 
-    //is this ours?
-    position pos = position(rw, cl);
-    if (!pGame->isOurs(pos, pGame->cPlayer) && selectionState == NO_SELECTION){
-    }
-    else if (selectionState == NO_SELECTION){
-        selectionState = FROM_SELECTED;
-        pGame->GUImoveStart = position(rw, cl);
-        size_t i;
-        for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
-            if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
-        i = i + (pGame->cPlayer*16) + 1;
-        setOpacity(i, "0.3");
-    }
-    else if (selectionState == FROM_SELECTED){
-        if (pGame->GUImoveStart.row == rw && pGame->GUImoveStart.col == cl){
-            // deselect the move
+    pGame->GUImoveStart = position(rw, cl);
+    offset.row = y % BUTTON_WIDTH;
+    offset.col = x % BUTTON_WIDTH;
+}
 
-            size_t i;
-            for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
-                if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
-            i = i + (pGame->cPlayer*16) + 1;
-            setOpacity(i, "1");
+void ChessGUI::boardClick(int x, int y){
+    // 0-indexed from top left
+    int cl = int(x/BUTTON_WIDTH) + 1;
+    int rw = int(y/BUTTON_WIDTH) + 1;
+    int dragY = y + 50 - offset.row;
+    int dragX = x + 50 - offset.col;
+    bool bMove = true;
+    string sx, sy;
 
-            pGame->GUImoveStart.row = -1;
-            pGame->GUImoveStart.col = -1;
-            selectionState = NO_SELECTION;
-
-            //string strImageOpacity = "opacity" + getBoardRef(cl,rw);
-            //pView->rootContext()->setContextProperty(strImageOpacity.c_str(), "1");
-        }
-        else{
-            selectionState = TO_SELECTED;
-            pGame->GUImoveEnd = position(rw, cl);
-            if (move()){                
-                size_t i;
-                for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
-                    if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
-                i = i + (pGame->cPlayer*16) + 1;
-                setOpacity(i, "1");
-                displayMove();
-                return;
-            }
-            else{
-                selectionState = FROM_SELECTED;
-                pGame->GUImoveEnd = position();// null
-            }
-        }
+    if (abs(dragY - (rw * BUTTON_WIDTH)) < 15 && abs(dragX - (cl * BUTTON_WIDTH)) < 15){
+        // we're close enough to a grid position to snap it in
+        stringstream ss, ss2;
+        ss << cl * BUTTON_WIDTH;
+        ss >> sx;
+        ss2 << rw * BUTTON_WIDTH;
+        ss2 >> sy;
     }
+    else
+        bMove = false;
+    // get the piece ID
+    size_t iPiece;
+    size_t i;
+    for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+        if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveStart) break;
+    if (i == 16)
+        return; // not ours to move
+    iPiece = i + (pGame->cPlayer*16) + 1;
+
+    pGame->GUImoveEnd = position(rw - 1, cl - 1);
+    if (bMove && move()){
+        setOpacity(iPiece, "1");
+    }
+    else{
+        // rejected - restore to original position
+        stringstream ss, ss2;
+        ss << (pGame->GUImoveStart.col + 1) * BUTTON_WIDTH;
+        ss >> sx;
+        ss2 << (pGame->GUImoveStart.row + 1) * BUTTON_WIDTH;
+        ss2 >> sy;
+    }
+
+    char cp[4];
+    itoa(iPiece, cp, 10);
+    string sxID = "xPiece";
+    string syID = "yPiece";
+    sxID += cp;
+    syID += cp;
+
+    pView->rootContext()->setContextProperty(sxID.c_str(), sx.c_str());
+    pView->rootContext()->setContextProperty(syID.c_str(), sy.c_str());
+    pGame->GUImoveStart = position();// null
+    pGame->GUImoveEnd = position();// null
     bProcessing = false;
 }
 
@@ -1576,12 +1623,14 @@ void ChessGUI::executeMove(string cmd){
         pGame->bGameOver = true;
         pGame->players[0].bComputer = false;
         pGame->players[1].bComputer = false;
+        bProcessing = false;
     }
     else if (pGame->isStalemate()){
         labelText += "\nThe game is A DRAW - the same move has been made three times now.";
         pGame->bGameOver = true;
         pGame->players[0].bComputer = false;
         pGame->players[1].bComputer = false;
+        bProcessing = false;
     }
     else if (pGame->cPlayer == 1){
         pGame->turn += 1;
@@ -1609,7 +1658,24 @@ bool ChessGUI::move(){
 
         string cmd = pGame->createMove(pGame->GUImoveStart, pGame->GUImoveEnd);
         if (pGame->validateMove(cmd, pGame->cPlayer)){
+            pGame->clearTakenIndex();
             pGame->movePiece(cmd, pGame->cPlayer);
+
+            size_t i;
+            for (i = 0; i < pGame->players[pGame->cPlayer].positions.size(); ++i)
+                if (pGame->players[pGame->cPlayer].positions[i] == pGame->GUImoveEnd) break;
+            assert(i != 16);
+            setPieceImage(pGame->players[pGame->cPlayer].pieces[i], pGame->GUImoveEnd, i + (pGame->cPlayer*16) + 1, false );
+
+            if (pGame->getTakenIndex() < 16){
+                // just set the oppo piece to the back
+                int pieceTaken = pGame->getTakenIndex() + (1-pGame->cPlayer)*16 + 1;
+                string szPiece = "zPiece";
+                char p[3];
+                itoa(pieceTaken, p, 10);
+                szPiece += p;
+                pView->rootContext()->setContextProperty(szPiece.c_str(), "-2");
+            }
             executeMove(cmd);
             return true;
         }
@@ -1627,7 +1693,6 @@ void ChessGUI::setOpacity(size_t iPiece, string opacityVal) const{
         opacityStr += cp;
         colorStr += cp;
         string colorVal = "";
-
         pView->rootContext()->setContextProperty(opacityStr.c_str(), opacityVal.c_str());
     }
 }
@@ -1686,6 +1751,7 @@ void ChessGUI::displayMove(){
         size_t i;
         for (i = 0; i < pGame->players[1-pGame->cPlayer].positions.size(); ++i)
             if (pGame->players[1-pGame->cPlayer].positions[i] == pGame->GUImoveEnd) break;
+        assert(i != 16);
         string zPieceStr = "zPiece";
         char cp[4];
         itoa(i + (1-pGame->cPlayer)*16 + 1, cp, 10);
@@ -1722,6 +1788,7 @@ void ChessGUI::completeMove(){
         size_t i;
         for (i = 0; i < pGame->players[1-pGame->cPlayer].positions.size(); ++i)
             if (pGame->players[1-pGame->cPlayer].positions[i] == pGame->GUImoveEnd) break;
+        assert(i != 16);
         // any opposing piece?
         setOpacity(i + (1-pGame->cPlayer)*16 + 1 , "1");
         setPieceImage(pGame->players[1-pGame->cPlayer].pieces[i], pGame->GUImoveEnd, i + (1-pGame->cPlayer)*16 + 1, false );
@@ -1740,7 +1807,6 @@ void ChessGUI::completeMove(){
 
     string strState = "appState";
     pView->rootContext()->setContextProperty(strState.c_str(), "");
-
     bProcessing = false;
 }
 
@@ -1809,6 +1875,11 @@ void ChessGUI::displayBoardImages() const{
                 if (!pGame->players[player].positions[piece].isValid()) cp = ' ';
                 setPieceImage(cp, pGame->players[player].positions[piece], piece + (player*16) + 1, false );
                 setOpacity(piece + (player*16) + 1 , "1");
+
+                string pieceStr = "piece";
+                char cIndex[3];
+                itoa(piece + (player*16) + 1, cIndex, 10);
+                pieceStr += cIndex;
             }
         }
     }
@@ -1901,7 +1972,6 @@ void ChessGUI::play(){
         pGame->GUImoveStart = pGame->players[pGame->cPlayer].lastMove.startPos;
         pGame->GUImoveEnd = pGame->players[pGame->cPlayer].lastMove.endPos;
         string cmd = pGame->createMove(pGame->GUImoveStart, pGame->GUImoveEnd);
-        bProcessing = true;
         executeMove(cmd);
         displayMove();
     }
@@ -1956,6 +2026,14 @@ int main(int argc, char *argv[])
 
     QObject::connect(item, SIGNAL(signalBoardClick(int,int)),
                         &chessGUI, SLOT(boardClickSlot(int,int)));
+
+    QObject::connect(item, SIGNAL(signalBoardPress(int,int)),
+                        &chessGUI, SLOT(boardPressSlot(int,int)));
+    // for drag and drop
+
+    QObject::connect(item, SIGNAL(signalPositionChange(int,int)),
+                        &chessGUI, SLOT(boardPositionChangeSlot(int,int)));
+    // for drag and drop
 
     QObject::connect(item, SIGNAL(signalNewGame()),
                         &chessGUI, SLOT(newSlot()));

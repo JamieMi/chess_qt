@@ -12,6 +12,8 @@ Rectangle {
      state: appState
 
      signal signalBoardClick(int x, int y)
+     signal signalBoardPress(int x, int y)
+     signal signalPositionChange(int x, int y)
      signal signalNewGame()
      signal signalSaveGame()
      signal signalLoadGame()
@@ -181,6 +183,12 @@ Rectangle {
 
                  onClicked:{
                      appRect.signalBoardClick(mouse.x, mouse.y)
+                 }
+                 onPressed:{
+                     appRect.signalBoardPress(mouse.x, mouse.y)
+                 }
+                 onPositionChanged:{
+                     appRect.signalPositionChange(mouse.x, mouse.y)
                  }
              }
 
