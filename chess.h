@@ -100,6 +100,7 @@ public:
     bool computerTurn(size_t iPlayer);
     size_t getTakenIndex() const {return opIndex;}
     void clearTakenIndex(){opIndex = -1;}
+    void printPieces() const;
 private:
     pastboards pastBoards;
     size_t opIndex; // recorded so that the image of a taken piece can be removed after a transition
@@ -110,7 +111,6 @@ private:
         createBoard();
     }
     void createPositions();
-    void printPlayers() const;
     void placePieces();
     void makeBoard(); // all functionality common to New and Load
     void getMoveCoords(const std::string& cmd, position& start, position& end) const;
@@ -121,10 +121,10 @@ private:
                     const int& theirPiece,
                     const size_t& iplayer,
                     bool bCheckCheck);
-    void printPieces() const;
+    void printPlayers() const;
     int getNumPieces(const int& iPlayer) const;
     size_t getCaptureValue(const char& piece);
-    bool scoreDirectionsLoop(size_t i, char p, bool bMove, std::string& sMove, size_t hiScore, position ourPos, size_t iPlayer);
+    bool scoreDirectionsLoop(size_t i, char p, bool bMove, std::string& sMove, size_t& hiScore, position ourPos, size_t iPlayer);
     bool commonScoring(bool bInCheck, size_t hiScore, int ourValue, int theirValue, int kingValue, bool bAI, size_t iPlayer);
     std::string createProspectiveMove(size_t& hiScore, size_t moveScore, const position ourPos, const position endPos) const;
 };
@@ -136,7 +136,6 @@ private:
     bool readFile(const QString &fileName);
     position offset; // used for drag and drop, for the position in a square by which the user is dragging it.
 public:
-    bool bProcessing;
     ChessGUI(gameobject* pg, QtQuick2ApplicationViewer* pV);
     void displayBoardImages() const;
     void initialise();
@@ -144,10 +143,11 @@ public:
     void showMessage(std::string msg) const;
     void setPieceImage(char p, position pos, size_t piece/*1-32*/, bool bTransition) const;
 private:
+    bool bProcessing;
     void boardClick(int x, int y);
     void boardPress(int x, int y); // drag and drop
     void boardPositionChange(int x, int y); // drag and drop
-    void newClick() const;
+    void newClick();
     void saveClick() const;
     void loadClick() const;
     void humanClick() const;
@@ -172,7 +172,7 @@ public:
     Q_INVOKABLE void boardClickSlot(int x, int y) {boardClick(x,y);}
     Q_INVOKABLE void boardPressSlot(int x, int y) {boardPress(x,y);} // drag and drop
     Q_INVOKABLE void boardPositionChangeSlot(int x, int y) {boardPositionChange(x,y);} // drag and drop
-    Q_INVOKABLE void newSlot() const {newClick();}
+    Q_INVOKABLE void newSlot() {newClick();}
     Q_INVOKABLE void saveSlot() const {saveClick();}
     Q_INVOKABLE void loadSlot() const {loadClick();}
     Q_INVOKABLE void humanSlot() const {humanClick();}

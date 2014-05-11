@@ -27,6 +27,8 @@ using namespace std;
 
 
 //#define __DEBUG__ // shows additional debug in console, irrespective of __GUI__
+//#define __DEBUGDECISIONS__ // turns on additional debug for decision making (validity of moves and scoring)
+//#define __DEBUGSTATE__ // turns on reporting of state (positions, board etc) for each move
 #define __GUI__ // shows using GUI - alternative is console mode
 
 const int MAX_TURNS = 50;
@@ -59,6 +61,16 @@ enum looptype{THEM_AGAINST_KING,	// check								M:1
 #else
     const bool bConsole = true;
     const bool bImages = false;
+#endif
+#ifdef __DEBUGDECISIONS__
+    const bool bDebugDecisions = true;
+#else
+    const bool bDebugDecisions = false;
+#endif
+#ifdef __DEBUGSTATE__
+    const bool bDebugState = true;
+#else
+    const bool bDebugState = false;
 #endif
 
 // turns on debug output and pauses
@@ -366,10 +378,24 @@ void gameobject::printPieces() const{
     if (bConsole){
         for (size_t i = 0; i < players.size(); ++i){
             cout << players[i].getName() << endl;
-                for (vector<position>::const_iterator itr = players[i].positions.begin(); itr != players[i].positions.end(); ++itr)
-                cout << "Piece: " << itr->row << " : " << itr->col << endl;
+            for (string::const_iterator itr = players[i].pieces.begin(); itr != players[i].pieces.end(); ++itr)
+                cout << *itr << " ";
+            cout << endl;
+            for (vector<position>::const_iterator itr = players[i].positions.begin(); itr != players[i].positions.end(); ++itr){
+                if (itr->row >= BOARD_RANKS)
+                    cout << "- ";
+                else
+                    cout << itr->row << " ";
+            }
+            cout << endl;
+            for (vector<position>::const_iterator itr = players[i].positions.begin(); itr != players[i].positions.end(); ++itr){
+                if (itr->col >= BOARD_FILES)
+                    cout << "- ";
+                else
+                    cout << itr->col << " ";
+            }
+            cout << endl;
         }
-        cout << endl;
     }
 }
 
@@ -778,7 +804,7 @@ bool gameobject::commonScoring(bool bInCheck, size_t hiScore, int ourValue, int 
 bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position startPos, position endPos, gameobject* gm){
     // make a copy of the board and positions arrays, only modified so that any tentative move is overlaid.
 #ifdef __DEBUG__
-    cout << "inCheck: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << endl;
+    if (bDebugDecisions) cout << "inCheck: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << endl;
 #endif
     size_t hiScore = finalHiScore; // award 10 pts for a move that takes king - test check
 
@@ -1020,7 +1046,7 @@ bool gameobject::inCheck(const size_t& player, size_t& finalHiScore, position st
     }
     finalHiScore = hiScore;
 #ifdef __DEBUG__
-    cout << "finalHiScore = " << finalHiScore << endl;
+    if (bDebugDecisions) cout << "finalHiScore = " << finalHiScore << endl;
 #endif
     if (!bAI)
         return false;
@@ -1033,7 +1059,7 @@ bool gameobject::checkPath(const position& startPos, const position& endPos, con
     int dirDown = ((int)endPos.row - (int)startPos.row) / distance; // i.e. can be -1, 0, or 1
     int dirRight = ((int)endPos.col - (int)startPos.col) / distance;
 #ifdef __DEBUG__
-    cout << "checkPath: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << " dirDown=" << dirDown << " dirRight=" << dirRight << endl;
+    if (bDebugDecisions) cout << "checkPath: " << startPos.row << ":" << startPos.col << " - " << endPos.row << ":" << endPos.col << " dirDown=" << dirDown << " dirRight=" << dirRight << endl;
 #endif
 
     for (int i = 1; i <  distance; ++i){
@@ -1043,7 +1069,7 @@ bool gameobject::checkPath(const position& startPos, const position& endPos, con
         if (!test.isValid())
             break;
         if (cboard[startPos.row + rowMovement][startPos.col + colMovement] != '.'){
-            if (bConsole) cout << "Move invalid - intercepting piece found: " << cboard[startPos.row + rowMovement][startPos.col + colMovement] << endl;
+            if (bConsole && bDebugDecisions) cout << "Move invalid - intercepting piece found: " << cboard[startPos.row + rowMovement][startPos.col + colMovement] << endl;
             return false; // can't take the piece if it's only on the way, and it can't be our own
         }
         if (bCheckCheck){
@@ -1063,7 +1089,7 @@ bool gameobject::checkPath(const position& startPos, const position& endPos, con
         return false;
 }
 
-bool gameobject::scoreDirectionsLoop(size_t i, char p, bool bMove, string& sMove, size_t hiScore, position ourPos, size_t iPlayer){
+bool gameobject::scoreDirectionsLoop(size_t i, char p, bool bMove, string& sMove, size_t& hiScore, position ourPos, size_t iPlayer){
     const int NUM_DIRS = 4 * (1 + (basicType(p) == 'K' or p == 'Q'));
     size_t numOurPieces = getNumPieces(iPlayer);
     size_t numTheirPieces = getNumPieces(1 - iPlayer);
@@ -1134,9 +1160,8 @@ bool gameobject::scoreDirectionsLoop(size_t i, char p, bool bMove, string& sMove
                                     && (endPos.row == (iPlayer * (BOARD_RANKS-1))))
                                     moveScore -= 2; // subtle hint not to move king into the far home corner in the later stages when under pressure
                             }
-                            if (hiScore < moveScore){
+                            if (hiScore < moveScore)
                                 sMove = createProspectiveMove(hiScore, moveScore, ourPos, endPos);
-                            }
                         }
                         else{
                             // False indicates only that we are not scoring - i.e. there is a valid move, therefore no further processing required
@@ -1231,7 +1256,7 @@ bool gameobject::inCheckMate(const size_t& iPlayer, const bool bMove){
     // Loop through every piece.
     int ourDir = 1 - iPlayer * 2;
     size_t hiScore = 0;
-    string sMove;
+    string sMove = "";
     size_t moveScore = 1000;
 
     // to evaluate in random order...
@@ -1265,7 +1290,7 @@ bool gameobject::inCheckMate(const size_t& iPlayer, const bool bMove){
             if (!isOurs(endPos, iPlayer) && !isOurs(endPos, 1 - iPlayer)){
                 moveScore = 1002;
                 if (!inCheck(iPlayer, moveScore, ourPos, endPos, NULL)){
-                    // this would get us out of check - we can leave now
+                    // this would leave us out of check - we can leave now
                     if (bMove){
                         if ((ourPos.col > 0 && cboard[iPlayer * (BOARD_RANKS - 1)][ourPos.col - 1] == 'B') || \
                             (ourPos.col < (BOARD_FILES - 1) && cboard[iPlayer * (BOARD_RANKS -1)][ourPos.col + 1] == 'B')){
@@ -1562,7 +1587,7 @@ void ChessGUI::boardClick(int x, int y){
     bool bMove = true;
     string sx, sy;
 
-    if (abs(dragY - (rw * BUTTON_WIDTH)) < 15 && abs(dragX - (cl * BUTTON_WIDTH)) < 15){
+    if (abs(dragY - (rw * BUTTON_WIDTH)) < 20 && abs(dragX - (cl * BUTTON_WIDTH)) < 20){
         // we're close enough to a grid position to snap it in
         stringstream ss, ss2;
         ss << cl * BUTTON_WIDTH;
@@ -1610,6 +1635,11 @@ void ChessGUI::boardClick(int x, int y){
 
 void ChessGUI::executeMove(string cmd){
     // This will handle those aspects common to both human and computer moves, including changing player
+    // at this point, display should always match internal representation:
+    if (bDebugState && bConsole){
+        // output positions of pieces
+        pGame->printPieces();
+    }
     size_t score = 0;
     pGame->cPlayer = 1 - pGame->cPlayer;
     string labelText = pGame->gameDetails();
@@ -1643,6 +1673,7 @@ void ChessGUI::executeMove(string cmd){
         msg += " moves have been made without victory." ;
         showMessage(msg);
         pGame->bGameOver = true;
+        bProcessing = false;
         pGame->players[0].bComputer = false;
         pGame->players[1].bComputer = false;
     }
@@ -1938,19 +1969,23 @@ void ChessGUI::computerMoveClick(){
     play();
 }
 
-void ChessGUI::newClick() const{
+void ChessGUI::newClick(){
     pGame->newGame();
     recreateBoard();
+    bProcessing = false;
 }
 
 void ChessGUI::saveClick() const{
-    if (!pGame->saveGame()){
-        string error = "Game could not be saved.";
-        if (bImages)
-            showMessage(error);
-        else
-            cout << error << endl;
-    }
+    string msg;
+    if (!pGame->saveGame())
+        msg = "Game could not be saved.";
+    else
+        msg = "Game saved.";
+    if (bImages)
+        showMessage(msg);
+    else
+        cout << msg << endl;
+
 }
 
 void ChessGUI::loadClick() const{
